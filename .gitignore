@@ -1,11 +1,274 @@
+# =========================
+# Root .gitignore for 4Semesterr
+# Covers:
+# - ASP.NET Core / .NET
+# - Visual Studio
+# - Unity
+# - local env / secret files
+# =========================
+
+
+# -------------------------
+# Visual Studio / IDE
+# -------------------------
 .vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.rsuser
+
+
+# -------------------------
+# .NET build output
+# -------------------------
 **/bin/
 **/obj/
-*.user
-*.suo
-*.rsuser
+
+
+# -------------------------
+# OS junk
+# -------------------------
 .DS_Store
 Thumbs.db
+
+
+# -------------------------
+# Environment / secrets
+# Keep example env file if you make one
+# -------------------------
 .env
 .env.*
 !.env.example
+
+
+# -------------------------
+# Local app config / secret overrides
+# Safe to keep placeholders like appsettings.json in git
+# -------------------------
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/secrets.local.json
+**/secrets.json
+
+
+# -------------------------
+# Publish profile user files
+# These can contain local deploy details
+# -------------------------
+**/Properties/PublishProfiles/*.pubxml.user
+
+
+# -------------------------
+# Unity generated folders
+# Keep Assets, Packages, ProjectSettings in git
+# Ignore machine-generated / local folders
+# -------------------------
+UnityClient/[Ll]ibrary/
+UnityClient/[Tt]emp/
+UnityClient/[Oo]bj/
+UnityClient/[Bb]uild/
+UnityClient/[Bb]uilds/
+UnityClient/[Ll]ogs/
+UnityClient/[Uu]serSettings/
+UnityClient/[Mm]emoryCaptures/
+UnityClient/[Rr]ecordings/
+
+
+# -------------------------
+# Optional Unity / IDE extras
+# Uncomment if you want them ignored too
+# -------------------------
+# UnityClient/.vsconfig
+# UnityClient/.vscode/
+
+
+# -------------------------
+# Database / local tooling scratch files
+# Uncomment if you later create local-only DB files
+# -------------------------
+# *.db
+# *.db-shm
+# *.db-wal# =========================
+# Root .gitignore for 4Semesterr
+# Covers:
+# - ASP.NET Core / .NET
+# - Visual Studio
+# - Unity
+# - local env / secret files
+# =========================
+
+
+# -------------------------
+# Visual Studio / IDE
+# -------------------------
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.rsuser
+
+
+# -------------------------
+# .NET build output
+# -------------------------
+**/bin/
+**/obj/
+
+
+# -------------------------
+# OS junk
+# -------------------------
+.DS_Store
+Thumbs.db
+
+
+# -------------------------
+# Environment / secrets
+# Keep example env file if you make one
+# -------------------------
+.env
+.env.*
+!.env.example
+
+
+# -------------------------
+# Local app config / secret overrides
+# Safe to keep placeholders like appsettings.json in git
+# -------------------------
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/secrets.local.json
+**/secrets.json
+
+
+# -------------------------
+# Publish profile user files
+# These can contain local deploy details
+# -------------------------
+**/Properties/PublishProfiles/*.pubxml.user
+
+
+# -------------------------
+# Unity generated folders
+# Keep Assets, Packages, ProjectSettings in git
+# Ignore machine-generated / local folders
+# -------------------------
+UnityClient/[Ll]ibrary/
+UnityClient/[Tt]emp/
+UnityClient/[Oo]bj/
+UnityClient/[Bb]uild/
+UnityClient/[Bb]uilds/
+UnityClient/[Ll]ogs/
+UnityClient/[Uu]serSettings/
+UnityClient/[Mm]emoryCaptures/
+UnityClient/[Rr]ecordings/
+
+
+# -------------------------
+# Optional Unity / IDE extras
+# Uncomment if you want them ignored too
+# -------------------------
+# UnityClient/.vsconfig
+# UnityClient/.vscode/
+
+
+# -------------------------
+# Database / local tooling scratch files
+# Uncomment if you later create local-only DB files
+# -------------------------
+# *.db
+# *.db-shm
+# *.db-wal# =========================
+# Root .gitignore for 4Semesterr
+# Covers:
+# - ASP.NET Core / .NET
+# - Visual Studio
+# - Unity
+# - local env / secret files
+# =========================
+
+
+# -------------------------
+# Visual Studio / IDE
+# -------------------------
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.rsuser
+
+
+# -------------------------
+# .NET build output
+# -------------------------
+**/bin/
+**/obj/
+
+
+# -------------------------
+# OS junk
+# -------------------------
+.DS_Store
+Thumbs.db
+
+
+# -------------------------
+# Environment / secrets
+# Keep example env file if you make one
+# -------------------------
+.env
+.env.*
+!.env.example
+
+
+# -------------------------
+# Local app config / secret overrides
+# Safe to keep placeholders like appsettings.json in git
+# -------------------------
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/secrets.local.json
+**/secrets.json
+
+
+# -------------------------
+# Publish profile user files
+# These can contain local deploy details
+# -------------------------
+**/Properties/PublishProfiles/*.pubxml.user
+
+
+# -------------------------
+# Unity generated folders
+# Keep Assets, Packages, ProjectSettings in git
+# Ignore machine-generated / local folders
+# -------------------------
+UnityClient/[Ll]ibrary/
+UnityClient/[Tt]emp/
+UnityClient/[Oo]bj/
+UnityClient/[Bb]uild/
+UnityClient/[Bb]uilds/
+UnityClient/[Ll]ogs/
+UnityClient/[Uu]serSettings/
+UnityClient/[Mm]emoryCaptures/
+UnityClient/[Rr]ecordings/
+
+
+# -------------------------
+# Optional Unity / IDE extras
+# Uncomment if you want them ignored too
+# -------------------------
+ UnityClient/.vsconfig
+UnityClient/.vscode/
+
+
+# -------------------------
+# Database / local tooling scratch files
+# Uncomment if you later create local-only DB files
+# -------------------------
+# *.db
+# *.db-shm
+# *.db-wal
