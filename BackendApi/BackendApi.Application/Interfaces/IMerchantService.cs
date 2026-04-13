@@ -5,6 +5,6 @@ namespace BackendApi.Application.Interfaces
     public interface IMerchantService
     {
         Task<IReadOnlyList<MerchantOfferResponseDto>> GetOffersAsync(Guid merchantId);
-        Task<BuyMerchantCardResponseDto> BuyCardAsync(Guid playerId, Guid merchantId, Guid offerId);
+        Task<BuyMerchantCardResponseDto> BuyCardAsync(Guid appUserId, Guid merchantId, Guid offerId);
     }
 }

@@ -38,10 +38,10 @@ namespace BackendApi.Infrastructure.Services
             return offers;
         }
 
-        public async Task<BuyMerchantCardResponseDto> BuyCardAsync(Guid playerId, Guid merchantId, Guid offerId)
+        public async Task<BuyMerchantCardResponseDto> BuyCardAsync(Guid appUserId, Guid merchantId, Guid offerId)
         {
             var player = await _dbContext.Players
-                .FirstOrDefaultAsync(x => x.PlayerId == playerId);
+                .FirstOrDefaultAsync(x => x.AppUserId == appUserId);
 
             if (player is null)
             {
