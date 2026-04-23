@@ -1,0 +1,110 @@
+﻿[
+  {
+    "key": "iron_helmet",
+    "name": "Iron Helmet",
+    "description": "Basic iron helmet.",
+    "slot": "Helmet",
+    "rarity": "Common",
+    "price": 20,
+    "armorValue": 3,
+    "setKey": "iron_set",
+    "iconKey": "iron_helmet",
+    "isMerchantAvailable": true
+  },
+  {
+    "key": "iron_chestplate",
+    "name": "Iron Chestplate",
+    "description": "Basic iron chestplate.",
+    "slot": "Chest",
+    "rarity": "Common",
+    "price": 28,
+    "armorValue": 5,
+    "setKey": "iron_set",
+    "iconKey": "iron_chestplate",
+    "isMerchantAvailable": true
+  },
+  {
+    "key": "iron_leggings",
+    "name": "Iron Leggings",
+    "description": "Basic iron leggings.",
+    "slot": "Legs",
+    "rarity": "Common",
+    "price": 24,
+    "armorValue": 4,
+    "setKey": "iron_set",
+    "iconKey": "iron_leggings",
+    "isMerchantAvailable": true
+  },
+  {
+    "key": "ranger_hood",
+    "name": "Ranger Hood",
+    "description": "Light ranger hood.",
+    "slot": "Helmet",
+    "rarity": "Uncommon",
+    "price": 32,
+    "armorValue": 4,
+    "setKey": "ranger_set",
+    "iconKey": "ranger_hood",
+    "isMerchantAvailable": true
+  },
+  {
+    "key": "ranger_jerkin",
+    "name": "Ranger Jerkin",
+    "description": "Flexible ranger chest armor.",
+    "slot": "Chest",
+    "rarity": "Uncommon",
+    "price": 40,
+    "armorValue": 6,
+    "setKey": "ranger_set",
+    "iconKey": "ranger_jerkin",
+    "isMerchantAvailable": true
+  },
+  {
+    "key": "ranger_greaves",
+    "name": "Ranger Greaves",
+    "description": "Light ranger leg armor.",
+    "slot": "Legs",
+    "rarity": "Uncommon",
+    "price": 35,
+    "armorValue": 5,
+    "setKey": "ranger_set",
+    "iconKey": "ranger_greaves",
+    "isMerchantAvailable": true
+  },
+  {
+    "key": "royal_crown",
+    "name": "Royal Crown",
+    "description": "A crown worn by champions.",
+    "slot": "Helmet",
+    "rarity": "Rare",
+    "price": 55,
+    "armorValue": 6,
+    "setKey": "royal_set",
+    "iconKey": "royal_crown",
+    "isMerchantAvailable": true
+  },
+  {
+    "key": "royal_plate",
+    "name": "Royal Plate",
+    "description": "A heavy royal chestplate.",
+    "slot": "Chest",
+    "rarity": "Rare",
+    "price": 70,
+    "armorValue": 9,
+    "setKey": "royal_set",
+    "iconKey": "royal_plate",
+    "isMerchantAvailable": true
+  },
+  {
+    "key": "royal_leggings",
+    "name": "Royal Leggings",
+    "description": "A sturdy royal leg piece.",
+    "slot": "Legs",
+    "rarity": "Rare",
+    "price": 60,
+    "armorValue": 7,
+    "setKey": "royal_set",
+    "iconKey": "royal_leggings",
+    "isMerchantAvailable": true
+  }
+]

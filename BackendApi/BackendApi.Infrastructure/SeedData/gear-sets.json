@@ -1,0 +1,17 @@
+﻿[
+  {
+    "setKey": "iron_set",
+    "name": "Iron Set",
+    "threePieceBonusDescription": "+5 Armor"
+  },
+  {
+    "setKey": "ranger_set",
+    "name": "Ranger Set",
+    "threePieceBonusDescription": "+1 Mana on each turn"
+  },
+  {
+    "setKey": "royal_set",
+    "name": "Royal Set",
+    "threePieceBonusDescription": "+10 Max Health"
+  }
+]

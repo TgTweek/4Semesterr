@@ -20,5 +20,9 @@
     <ProjectReference Include="..\BackendApi.Application\BackendApi.Application.csproj" />
     <ProjectReference Include="..\BackendApi.Domain\BackendApi.Domain.csproj" />
   </ItemGroup>
-
+	<ItemGroup>
+		<EmbeddedResource Include="SeedData\cards.json" />
+		<EmbeddedResource Include="SeedData\gear-sets.json" />
+		<EmbeddedResource Include="SeedData\gear.json" />
+	</ItemGroup>
 </Project>

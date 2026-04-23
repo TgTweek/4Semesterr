@@ -15,5 +15,6 @@ namespace BackendApi.Domain.Entities
         public string Rarity { get; set; } = string.Empty;
         public string IconKey { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
+        public bool IsMerchantAvailable { get; set; } = true;
     }
 }

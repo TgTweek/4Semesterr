@@ -16,15 +16,18 @@ namespace BackendApi.Api.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly GameDbContext _dbContext;
         private readonly IJwtTokenService _jwtTokenService;
+        private readonly IStarterInventoryService _starterInventoryService;
 
         public AuthController(
-            UserManager<AppUser> userManager,
-            GameDbContext dbContext,
-            IJwtTokenService jwtTokenService)
+    UserManager<AppUser> userManager,
+    GameDbContext dbContext,
+    IJwtTokenService jwtTokenService,
+    IStarterInventoryService starterInventoryService)
         {
             _userManager = userManager;
             _dbContext = dbContext;
             _jwtTokenService = jwtTokenService;
+            _starterInventoryService = starterInventoryService;
         }
 
         [HttpPost("register")]
@@ -64,11 +67,13 @@ namespace BackendApi.Api.Controllers
             _dbContext.Players.Add(player);
             await _dbContext.SaveChangesAsync();
 
+            await _starterInventoryService.GrantStarterCardsAsync(player.PlayerId);
+
             var token = _jwtTokenService.CreateAccessToken(
-           appUser.Id,
-           appUser.Email ?? string.Empty,
-           player.PlayerId,
-           player.PlayerName);
+               appUser.Id,
+               appUser.Email ?? string.Empty,
+               player.PlayerId,
+               player.PlayerName);
 
             return Ok(new AuthResponseDto
             {

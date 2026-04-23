@@ -49,6 +49,9 @@ namespace BackendApi.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsMerchantAvailable")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -76,6 +79,91 @@ namespace BackendApi.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("CardDefinitions");
+                });
+
+            modelBuilder.Entity("BackendApi.Domain.Entities.GearDefinition", b =>
+                {
+                    b.Property<Guid>("GearDefinitionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ArmorValue")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("IconKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsMerchantAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Rarity")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SetKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Slot")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("GearDefinitionId");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.ToTable("GearDefinitions");
+                });
+
+            modelBuilder.Entity("BackendApi.Domain.Entities.GearSetDefinition", b =>
+                {
+                    b.Property<Guid>("GearSetDefinitionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("SetKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ThreePieceBonusDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("GearSetDefinitionId");
+
+                    b.HasIndex("SetKey")
+                        .IsUnique();
+
+                    b.ToTable("GearSetDefinitions");
                 });
 
             modelBuilder.Entity("BackendApi.Domain.Entities.Merchant", b =>
@@ -189,6 +277,120 @@ namespace BackendApi.Infrastructure.Persistence.Migrations
                     b.HasIndex("PlayerId");
 
                     b.ToTable("PlayerCards");
+                });
+
+            modelBuilder.Entity("BackendApi.Domain.Entities.PlayerGear", b =>
+                {
+                    b.Property<Guid>("PlayerGearId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AcquiredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("GearDefinitionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PlayerGearId");
+
+                    b.HasIndex("GearDefinitionId");
+
+                    b.HasIndex("PlayerId");
+
+                    b.ToTable("PlayerGears");
+                });
+
+            modelBuilder.Entity("BackendApi.Domain.Entities.PlayerMerchantCardOffer", b =>
+                {
+                    b.Property<Guid>("PlayerMerchantCardOfferId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CardDefinitionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("GeneratedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsSold")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("MerchantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("PlayerMerchantCardOfferId");
+
+                    b.HasIndex("CardDefinitionId");
+
+                    b.HasIndex("MerchantId");
+
+                    b.HasIndex("PlayerId", "MerchantId", "DisplayOrder")
+                        .IsUnique();
+
+                    b.ToTable("PlayerMerchantCardOffers");
+                });
+
+            modelBuilder.Entity("BackendApi.Domain.Entities.PlayerMerchantGearOffer", b =>
+                {
+                    b.Property<Guid>("PlayerMerchantGearOfferId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("GearDefinitionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("GeneratedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsSold")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("MerchantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("PlayerMerchantGearOfferId");
+
+                    b.HasIndex("GearDefinitionId");
+
+                    b.HasIndex("MerchantId");
+
+                    b.HasIndex("PlayerId", "MerchantId", "DisplayOrder")
+                        .IsUnique();
+
+                    b.ToTable("PlayerMerchantGearOffers");
                 });
 
             modelBuilder.Entity("BackendApi.Infrastructure.Identity.AppUser", b =>
@@ -431,6 +633,79 @@ namespace BackendApi.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("CardDefinition");
+
+                    b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("BackendApi.Domain.Entities.PlayerGear", b =>
+                {
+                    b.HasOne("BackendApi.Domain.Entities.GearDefinition", "GearDefinition")
+                        .WithMany()
+                        .HasForeignKey("GearDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BackendApi.Domain.Entities.Player", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GearDefinition");
+
+                    b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("BackendApi.Domain.Entities.PlayerMerchantCardOffer", b =>
+                {
+                    b.HasOne("BackendApi.Domain.Entities.CardDefinition", "CardDefinition")
+                        .WithMany()
+                        .HasForeignKey("CardDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BackendApi.Domain.Entities.Merchant", "Merchant")
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BackendApi.Domain.Entities.Player", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CardDefinition");
+
+                    b.Navigation("Merchant");
+
+                    b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("BackendApi.Domain.Entities.PlayerMerchantGearOffer", b =>
+                {
+                    b.HasOne("BackendApi.Domain.Entities.GearDefinition", "GearDefinition")
+                        .WithMany()
+                        .HasForeignKey("GearDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BackendApi.Domain.Entities.Merchant", "Merchant")
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BackendApi.Domain.Entities.Player", "Player")
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GearDefinition");
+
+                    b.Navigation("Merchant");
 
                     b.Navigation("Player");
                 });

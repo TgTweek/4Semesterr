@@ -1,10 +1,15 @@
-﻿using BackendApi.Domain.Entities;
+﻿using System.Reflection;
+using System.Text.Json;
+using BackendApi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace BackendApi.Infrastructure.Persistence
 {
     public sealed class GameDbSeeder
     {
+        private static readonly Guid DefaultMerchantId =
+            Guid.Parse("22222222-2222-2222-2222-222222222222");
+
         private readonly GameDbContext _dbContext;
 
         public GameDbSeeder(GameDbContext dbContext)
@@ -16,111 +21,202 @@ namespace BackendApi.Infrastructure.Persistence
         {
             await _dbContext.Database.MigrateAsync();
 
-            
+            await EnsureDefaultMerchantAsync();
+            await SeedCardDefinitionsAsync();
+            await SeedGearSetDefinitionsAsync();
+            await SeedGearDefinitionsAsync();
 
-            if (!await _dbContext.CardDefinitions.AnyAsync())
+            await _dbContext.SaveChangesAsync();
+        }
+
+        private async Task EnsureDefaultMerchantAsync()
+        {
+            var merchant = await _dbContext.Merchants
+                .FirstOrDefaultAsync(x => x.MerchantId == DefaultMerchantId);
+
+            if (merchant is null)
             {
-                var fireball = new CardDefinition
+                merchant = new Merchant
                 {
-                    CardDefinitionId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                    Key = "fireball",
-                    Name = "Fireball",
-                    Description = "Deal 10 damage.",
-                    ManaCost = 2,
-                    Price = 25,
-                    EffectType = "Damage",
-                    EffectValue = 10,
-                    Rarity = "Common",
-                    IconKey = "fireball",
-                    IsActive = true
-                };
-
-                var shieldBash = new CardDefinition
-                {
-                    CardDefinitionId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-                    Key = "shield_bash",
-                    Name = "Shield Bash",
-                    Description = "Deal 6 damage.",
-                    ManaCost = 1,
-                    Price = 20,
-                    EffectType = "Damage",
-                    EffectValue = 6,
-                    Rarity = "Common",
-                    IconKey = "shield_bash",
-                    IsActive = true
-                };
-
-                var quickStrike = new CardDefinition
-                {
-                    CardDefinitionId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
-                    Key = "quick_strike",
-                    Name = "Quick Strike",
-                    Description = "Deal 4 damage.",
-                    ManaCost = 1,
-                    Price = 15,
-                    EffectType = "Damage",
-                    EffectValue = 4,
-                    Rarity = "Common",
-                    IconKey = "quick_strike",
-                    IsActive = true
-                };
-
-                _dbContext.CardDefinitions.AddRange(fireball, shieldBash, quickStrike);
-            }
-
-            if (!await _dbContext.Merchants.AnyAsync())
-            {
-                var merchant = new Merchant
-                {
-                    MerchantId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                    Name = "Starter Merchant",
-                    IsActive = true
+                    MerchantId = DefaultMerchantId,
+                    Name = "Starter Merchant"
                 };
 
                 _dbContext.Merchants.Add(merchant);
             }
-
-            await _dbContext.SaveChangesAsync();
-
-            if (!await _dbContext.MerchantOffers.AnyAsync())
+            else
             {
-                var merchantId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+                merchant.Name = "Starter Merchant";
+            }
+        }
 
-                var offers = new[]
+        private async Task SeedCardDefinitionsAsync()
+        {
+            var seedItems = ReadEmbeddedJson<List<CardSeedItem>>("cards.json");
+
+            var existingByKey = await _dbContext.CardDefinitions
+                .ToDictionaryAsync(x => x.Key);
+
+            foreach (var item in seedItems)
+            {
+                if (!existingByKey.TryGetValue(item.Key, out var entity))
                 {
-                    new MerchantOffer
+                    entity = new CardDefinition
                     {
-                        MerchantOfferId = Guid.Parse("33333333-3333-3333-3333-333333333331"),
-                        MerchantId = merchantId,
-                        CardDefinitionId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                        Price = 25,
-                        Stock = 10,
-                        IsActive = true
-                    },
-                    new MerchantOffer
-                    {
-                        MerchantOfferId = Guid.Parse("33333333-3333-3333-3333-333333333332"),
-                        MerchantId = merchantId,
-                        CardDefinitionId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-                        Price = 20,
-                        Stock = 10,
-                        IsActive = true
-                    },
-                    new MerchantOffer
-                    {
-                        MerchantOfferId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
-                        MerchantId = merchantId,
-                        CardDefinitionId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
-                        Price = 15,
-                        Stock = 10,
-                        IsActive = true
-                    }
-                };
+                        CardDefinitionId = Guid.NewGuid(),
+                        Key = item.Key
+                    };
 
-                _dbContext.MerchantOffers.AddRange(offers);
+                    _dbContext.CardDefinitions.Add(entity);
+                    existingByKey[item.Key] = entity;
+                }
+
+                entity.Name = item.Name;
+                entity.Description = item.Description;
+                entity.ManaCost = item.ManaCost;
+                entity.Price = item.Price;
+                entity.EffectType = item.EffectType;
+                entity.EffectValue = item.EffectValue;
+                entity.Rarity = item.Rarity;
+                entity.IconKey = item.IconKey;
+                entity.IsActive = item.IsActive;
+                entity.IsMerchantAvailable = item.IsMerchantAvailable;
+            }
+        }
+
+        private async Task SeedGearSetDefinitionsAsync()
+        {
+            var seedItems = ReadEmbeddedJson<List<GearSetSeedItem>>("gear-sets.json");
+
+            var existingBySetKey = await _dbContext.GearSetDefinitions
+                .ToDictionaryAsync(x => x.SetKey);
+
+            foreach (var item in seedItems)
+            {
+                if (!existingBySetKey.TryGetValue(item.SetKey, out var entity))
+                {
+                    entity = new GearSetDefinition
+                    {
+                        GearSetDefinitionId = Guid.NewGuid(),
+                        SetKey = item.SetKey
+                    };
+
+                    _dbContext.GearSetDefinitions.Add(entity);
+                    existingBySetKey[item.SetKey] = entity;
+                }
+
+                entity.Name = item.Name;
+                entity.ThreePieceBonusDescription = item.ThreePieceBonusDescription;
+            }
+        }
+
+        private async Task SeedGearDefinitionsAsync()
+        {
+            var seedItems = ReadEmbeddedJson<List<GearSeedItem>>("gear.json");
+
+            var existingByKey = await _dbContext.GearDefinitions
+                .ToDictionaryAsync(x => x.Key);
+
+            foreach (var item in seedItems)
+            {
+                if (!existingByKey.TryGetValue(item.Key, out var entity))
+                {
+                    entity = new GearDefinition
+                    {
+                        GearDefinitionId = Guid.NewGuid(),
+                        Key = item.Key
+                    };
+
+                    _dbContext.GearDefinitions.Add(entity);
+                    existingByKey[item.Key] = entity;
+                }
+
+                entity.Name = item.Name;
+                entity.Description = item.Description;
+                entity.Slot = item.Slot;
+                entity.Rarity = item.Rarity;
+                entity.Price = item.Price;
+                entity.ArmorValue = item.ArmorValue;
+                entity.SetKey = item.SetKey;
+                entity.IconKey = item.IconKey;
+                entity.IsMerchantAvailable = item.IsMerchantAvailable;
+            }
+        }
+
+        private static T ReadEmbeddedJson<T>(string fileName)
+        {
+            var assembly = typeof(GameDbSeeder).Assembly;
+
+            var resourceName = assembly
+                .GetManifestResourceNames()
+                .FirstOrDefault(x => x.EndsWith($".SeedData.{fileName}", StringComparison.OrdinalIgnoreCase));
+
+            if (resourceName is null)
+            {
+                throw new InvalidOperationException(
+                    $"Embedded resource for '{fileName}' was not found.");
             }
 
-            await _dbContext.SaveChangesAsync();
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream is null)
+            {
+                throw new InvalidOperationException(
+                    $"Embedded resource stream for '{fileName}' was not found.");
+            }
+
+            using var reader = new StreamReader(stream);
+            var json = reader.ReadToEnd();
+
+            var result = JsonSerializer.Deserialize<T>(
+                json,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+            if (result is null)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to deserialize embedded JSON file '{fileName}'.");
+            }
+
+            return result;
+        }
+
+        private sealed class CardSeedItem
+        {
+            public string Key { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public int ManaCost { get; set; }
+            public int Price { get; set; }
+            public string EffectType { get; set; } = string.Empty;
+            public int EffectValue { get; set; }
+            public string Rarity { get; set; } = string.Empty;
+            public string IconKey { get; set; } = string.Empty;
+            public bool IsActive { get; set; }
+            public bool IsMerchantAvailable { get; set; }
+        }
+
+        private sealed class GearSetSeedItem
+        {
+            public string SetKey { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string? ThreePieceBonusDescription { get; set; }
+        }
+
+        private sealed class GearSeedItem
+        {
+            public string Key { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public string Slot { get; set; } = string.Empty;
+            public string Rarity { get; set; } = string.Empty;
+            public int Price { get; set; }
+            public int ArmorValue { get; set; }
+            public string? SetKey { get; set; }
+            public string IconKey { get; set; } = string.Empty;
+            public bool IsMerchantAvailable { get; set; }
         }
     }
 }

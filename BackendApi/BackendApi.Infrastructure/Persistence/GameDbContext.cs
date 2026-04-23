@@ -1,8 +1,9 @@
 ﻿using BackendApi.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 using BackendApi.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
 namespace BackendApi.Infrastructure.Persistence
 {
     public class GameDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
@@ -16,6 +17,12 @@ namespace BackendApi.Infrastructure.Persistence
         public DbSet<Merchant> Merchants => Set<Merchant>();
         public DbSet<MerchantOffer> MerchantOffers => Set<MerchantOffer>();
         public DbSet<PlayerCard> PlayerCards => Set<PlayerCard>();
+
+        public DbSet<GearDefinition> GearDefinitions => Set<GearDefinition>();
+        public DbSet<GearSetDefinition> GearSetDefinitions => Set<GearSetDefinition>();
+        public DbSet<PlayerGear> PlayerGears => Set<PlayerGear>();
+        public DbSet<PlayerMerchantCardOffer> PlayerMerchantCardOffers => Set<PlayerMerchantCardOffer>();
+        public DbSet<PlayerMerchantGearOffer> PlayerMerchantGearOffers => Set<PlayerMerchantGearOffer>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -49,6 +56,7 @@ namespace BackendApi.Infrastructure.Persistence
                     .HasForeignKey<Player>(x => x.AppUserId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+
             modelBuilder.Entity<CardDefinition>(entity =>
             {
                 entity.HasKey(x => x.CardDefinitionId);
@@ -75,6 +83,9 @@ namespace BackendApi.Infrastructure.Persistence
 
                 entity.Property(x => x.IconKey)
                     .HasMaxLength(100);
+
+                entity.Property(x => x.IsMerchantAvailable)
+                    .IsRequired();
             });
 
             modelBuilder.Entity<Merchant>(entity =>
@@ -126,6 +137,161 @@ namespace BackendApi.Infrastructure.Persistence
 
                 entity.Property(x => x.AcquiredAtUtc)
                     .IsRequired();
+            });
+
+            modelBuilder.Entity<GearDefinition>(entity =>
+            {
+                entity.HasKey(x => x.GearDefinitionId);
+
+                entity.Property(x => x.Key)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.HasIndex(x => x.Key)
+                    .IsUnique();
+
+                entity.Property(x => x.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.Description)
+                    .HasMaxLength(1000);
+
+                entity.Property(x => x.Slot)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.Rarity)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.Price)
+                    .IsRequired();
+
+                entity.Property(x => x.ArmorValue)
+                    .IsRequired();
+
+                entity.Property(x => x.SetKey)
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.IconKey)
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.IsMerchantAvailable)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity<GearSetDefinition>(entity =>
+            {
+                entity.HasKey(x => x.GearSetDefinitionId);
+
+                entity.Property(x => x.SetKey)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.HasIndex(x => x.SetKey)
+                    .IsUnique();
+
+                entity.Property(x => x.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.ThreePieceBonusDescription)
+                    .HasMaxLength(500);
+            });
+
+            modelBuilder.Entity<PlayerGear>(entity =>
+            {
+                entity.HasKey(x => x.PlayerGearId);
+
+                entity.HasOne(x => x.Player)
+                    .WithMany()
+                    .HasForeignKey(x => x.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.GearDefinition)
+                    .WithMany()
+                    .HasForeignKey(x => x.GearDefinitionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(x => x.AcquiredAtUtc)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity<PlayerMerchantCardOffer>(entity =>
+            {
+                entity.HasKey(x => x.PlayerMerchantCardOfferId);
+
+                entity.HasOne(x => x.Player)
+                    .WithMany()
+                    .HasForeignKey(x => x.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Merchant)
+                    .WithMany()
+                    .HasForeignKey(x => x.MerchantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.CardDefinition)
+                    .WithMany()
+                    .HasForeignKey(x => x.CardDefinitionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(x => x.Price)
+                    .IsRequired();
+
+                entity.Property(x => x.DisplayOrder)
+                    .IsRequired();
+
+                entity.Property(x => x.IsSold)
+                    .IsRequired();
+
+                entity.Property(x => x.GeneratedAtUtc)
+                    .IsRequired();
+
+                entity.Property(x => x.RowVersion)
+                    .IsRowVersion();
+
+                entity.HasIndex(x => new { x.PlayerId, x.MerchantId, x.DisplayOrder })
+                    .IsUnique();
+            });
+
+            modelBuilder.Entity<PlayerMerchantGearOffer>(entity =>
+            {
+                entity.HasKey(x => x.PlayerMerchantGearOfferId);
+
+                entity.HasOne(x => x.Player)
+                    .WithMany()
+                    .HasForeignKey(x => x.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Merchant)
+                    .WithMany()
+                    .HasForeignKey(x => x.MerchantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.GearDefinition)
+                    .WithMany()
+                    .HasForeignKey(x => x.GearDefinitionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(x => x.Price)
+                    .IsRequired();
+
+                entity.Property(x => x.DisplayOrder)
+                    .IsRequired();
+
+                entity.Property(x => x.IsSold)
+                    .IsRequired();
+
+                entity.Property(x => x.GeneratedAtUtc)
+                    .IsRequired();
+
+                entity.Property(x => x.RowVersion)
+                    .IsRowVersion();
+
+                entity.HasIndex(x => new { x.PlayerId, x.MerchantId, x.DisplayOrder })
+                    .IsUnique();
             });
         }
     }
