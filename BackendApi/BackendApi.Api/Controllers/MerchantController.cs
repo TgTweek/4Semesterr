@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BackendApi.Api.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/merchants")]
     public sealed class MerchantController : ControllerBase
     {
@@ -17,22 +18,35 @@ namespace BackendApi.Api.Controllers
             _merchantService = merchantService;
         }
 
-        [HttpGet("{merchantId:guid}/offers")]
-        public async Task<ActionResult<IReadOnlyList<MerchantOfferResponseDto>>> GetOffers(Guid merchantId)
+        [HttpGet("{merchantId:guid}/inventory")]
+        public async Task<ActionResult<MerchantInventoryResponseDto>> GetInventory(Guid merchantId)
         {
-            var offers = await _merchantService.GetOffersAsync(merchantId);
-            return Ok(offers);
+            if (!TryGetAppUserId(out var appUserId))
+            {
+                return Unauthorized("Invalid or missing user identifier.");
+            }
+
+            try
+            {
+                var result = await _merchantService.GetInventoryAsync(appUserId, merchantId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        [Authorize]
-        [HttpPost("{merchantId:guid}/buy")]
-        public async Task<ActionResult<BuyMerchantCardResponseDto>> Buy(
+        [HttpPost("{merchantId:guid}/cards/buy")]
+        public async Task<ActionResult<BuyMerchantCardResponseDto>> BuyCard(
             Guid merchantId,
             [FromBody] BuyMerchantCardRequestDto request)
         {
-            var appUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (!Guid.TryParse(appUserIdClaim, out var appUserId))
+            if (!TryGetAppUserId(out var appUserId))
             {
                 return Unauthorized("Invalid or missing user identifier.");
             }
@@ -45,6 +59,34 @@ namespace BackendApi.Api.Controllers
             }
 
             return Ok(result);
+        }
+
+        [HttpPost("{merchantId:guid}/gear/buy")]
+        public async Task<ActionResult<BuyMerchantGearResponseDto>> BuyGear(
+            Guid merchantId,
+            [FromBody] BuyMerchantGearRequestDto request)
+        {
+            if (!TryGetAppUserId(out var appUserId))
+            {
+                return Unauthorized("Invalid or missing user identifier.");
+            }
+
+            var result = await _merchantService.BuyGearAsync(appUserId, merchantId, request.OfferId);
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+
+        private bool TryGetAppUserId(out Guid appUserId)
+        {
+            appUserId = Guid.Empty;
+
+            var appUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(appUserIdClaim, out appUserId);
         }
     }
 }

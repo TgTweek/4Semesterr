@@ -4,7 +4,11 @@ namespace BackendApi.Application.Interfaces
 {
     public interface IMerchantService
     {
-        Task<IReadOnlyList<MerchantOfferResponseDto>> GetOffersAsync(Guid merchantId);
+        Task<MerchantInventoryResponseDto> GetInventoryAsync(Guid appUserId, Guid merchantId);
         Task<BuyMerchantCardResponseDto> BuyCardAsync(Guid appUserId, Guid merchantId, Guid offerId);
+        Task<BuyMerchantGearResponseDto> BuyGearAsync(Guid appUserId, Guid merchantId, Guid offerId);
+
+        // Bruges senere af run-complete flow.
+        Task RefreshInventoryAsync(Guid appUserId, Guid merchantId);
     }
 }
