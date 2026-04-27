@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Game.Presentation.Merchant.Controllers;
 
 namespace Game.Presentation.MainHub.Controllers
 {
@@ -19,6 +20,9 @@ namespace Game.Presentation.MainHub.Controllers
         [SerializeField] private GameObject housePanel = null!;
         [SerializeField] private GameObject chestPanel = null!;
         [SerializeField] private GameObject worldMapPanel = null!;
+
+        [Header("Panel Controllers")]
+        [SerializeField] private MerchantPanelScript merchantPanelScript = null!;
 
         [Header("Close Buttons")]
         [SerializeField] private Button merchantCloseButton = null!;
@@ -46,9 +50,10 @@ namespace Game.Presentation.MainHub.Controllers
             CloseAllPanels();
         }
 
-        private void OpenMerchantPanel()
+        private async void OpenMerchantPanel()
         {
             ShowOnlyPanel(merchantPanel);
+            await merchantPanelScript.LoadInventoryAsync();
         }
 
         private void OpenHousePanel()

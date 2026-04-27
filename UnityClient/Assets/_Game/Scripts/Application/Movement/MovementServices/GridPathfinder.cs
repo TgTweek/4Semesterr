@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Game.Application.Abstractions;
 using Game.Domain.ValueObjects;
 
@@ -22,57 +23,102 @@ namespace Game.Application.Movement.Services
                 return Array.Empty<CellPosition>();
             }
 
-            var frontier = new Queue<CellPosition>();
-            var visited = new HashSet<CellPosition>();
+            var openSet = new List<CellPosition> { start };
             var cameFrom = new Dictionary<CellPosition, CellPosition>();
 
-            frontier.Enqueue(start);
-            visited.Add(start);
-
-            var pathFound = false;
-
-            while (frontier.Count > 0)
+            var gScore = new Dictionary<CellPosition, int>
             {
-                var current = frontier.Dequeue();
+                [start] = 0
+            };
 
-                foreach (var neighbor in current.GetCardinalNeighbors())
+            var fScore = new Dictionary<CellPosition, int>
+            {
+                [start] = Heuristic(start, target)
+            };
+
+            while (openSet.Count > 0)
+            {
+                var current = GetLowestFScore(openSet, fScore);
+
+                if (current.Equals(target))
                 {
-                    if (visited.Contains(neighbor))
-                    {
-                        continue;
-                    }
+                    return ReconstructPath(cameFrom, current);
+                }
 
+                openSet.Remove(current);
+
+                foreach (var neighbor in GetOrderedNeighbors(current, target))
+                {
                     if (!navigationGrid.IsWalkable(neighbor))
                     {
                         continue;
                     }
 
-                    visited.Add(neighbor);
-                    cameFrom[neighbor] = current;
+                    var tentativeGScore = gScore[current] + 1;
 
-                    if (neighbor.Equals(target))
+                    if (!gScore.TryGetValue(neighbor, out var existingGScore) || tentativeGScore < existingGScore)
                     {
-                        pathFound = true;
-                        frontier.Clear();
-                        break;
-                    }
+                        cameFrom[neighbor] = current;
+                        gScore[neighbor] = tentativeGScore;
+                        fScore[neighbor] = tentativeGScore + Heuristic(neighbor, target);
 
-                    frontier.Enqueue(neighbor);
+                        if (!openSet.Contains(neighbor))
+                        {
+                            openSet.Add(neighbor);
+                        }
+                    }
                 }
             }
 
-            if (!pathFound)
+            return Array.Empty<CellPosition>();
+        }
+
+        private static IEnumerable<CellPosition> GetOrderedNeighbors(CellPosition current, CellPosition target)
+        {
+            return current
+                .GetCardinalNeighbors()
+                .OrderBy(x => Heuristic(x, target))
+                .ThenBy(x => x.X)
+                .ThenBy(x => x.Y);
+        }
+
+        private static int Heuristic(CellPosition a, CellPosition b)
+        {
+            return Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+        }
+
+        private static CellPosition GetLowestFScore(
+            List<CellPosition> openSet,
+            Dictionary<CellPosition, int> fScore)
+        {
+            var best = openSet[0];
+            var bestScore = fScore.TryGetValue(best, out var score) ? score : int.MaxValue;
+
+            for (var i = 1; i < openSet.Count; i++)
             {
-                return Array.Empty<CellPosition>();
+                var candidate = openSet[i];
+                var candidateScore = fScore.TryGetValue(candidate, out var value) ? value : int.MaxValue;
+
+                if (candidateScore < bestScore)
+                {
+                    best = candidate;
+                    bestScore = candidateScore;
+                }
             }
 
-            var path = new List<CellPosition> { target };
-            var step = target;
+            return best;
+        }
 
-            while (!step.Equals(start))
+        private static IReadOnlyList<CellPosition> ReconstructPath(
+            Dictionary<CellPosition, CellPosition> cameFrom,
+            CellPosition current)
+        {
+            var path = new List<CellPosition> { current };
+
+            while (cameFrom.TryGetValue(current, out var previous))
             {
-                step = cameFrom[step];
-                path.Add(step);
+                current = previous;
+                path.Add(current);
             }
 
             path.Reverse();

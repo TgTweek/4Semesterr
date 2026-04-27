@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Game.Application.Movement.Commands;
 using Game.Application.Movement.UseCases;
@@ -13,8 +14,13 @@ namespace Game.Presentation.Common.Movement.Controllers
         [SerializeField] private Camera worldCamera;
         [SerializeField] private Grid grid;
         [SerializeField] private TilemapPlayerView playerView;
+        [SerializeField] private MovementTargetIndicatorView targetIndicatorView;
 
         private FindPathToCellUseCase _findPathToCellUseCase;
+
+        private Vector3Int? _lastHoverStartCell;
+        private Vector3Int? _lastHoverTargetCell;
+        private List<Vector3Int> _cachedHoverPath = new();
 
         public void Initialize(FindPathToCellUseCase findPathToCellUseCase)
         {
@@ -28,7 +34,7 @@ namespace Game.Presentation.Common.Movement.Controllers
 
         private void Update()
         {
-            if (_findPathToCellUseCase == null)
+            if (_findPathToCellUseCase == null || worldCamera == null || grid == null || playerView == null)
             {
                 return;
             }
@@ -38,13 +44,9 @@ namespace Game.Presentation.Common.Movement.Controllers
                 return;
             }
 
-            if (!Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                return;
-            }
-
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
+                ClearHoverState();
                 return;
             }
 
@@ -55,6 +57,34 @@ namespace Game.Presentation.Common.Movement.Controllers
             var targetCell = grid.WorldToCell(worldPoint);
             var startCell = playerView.GetCurrentCell();
 
+            UpdateHoverState(startCell, targetCell);
+
+            if (!Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                return;
+            }
+
+            if (_cachedHoverPath.Count == 0)
+            {
+                return;
+            }
+
+            playerView.MoveAlong(_cachedHoverPath);
+        }
+
+        private void UpdateHoverState(Vector3Int startCell, Vector3Int targetCell)
+        {
+            if (_lastHoverStartCell.HasValue &&
+                _lastHoverTargetCell.HasValue &&
+                _lastHoverStartCell.Value == startCell &&
+                _lastHoverTargetCell.Value == targetCell)
+            {
+                return;
+            }
+
+            _lastHoverStartCell = startCell;
+            _lastHoverTargetCell = targetCell;
+
             var result = _findPathToCellUseCase.Execute(
                 new FindPathCommand(
                     startCell.x,
@@ -64,14 +94,24 @@ namespace Game.Presentation.Common.Movement.Controllers
 
             if (!result.IsSuccess)
             {
+                _cachedHoverPath.Clear();
+                targetIndicatorView?.Clear();
                 return;
             }
 
-            var path = result.Path
+            _cachedHoverPath = result.Path
                 .Select(x => new Vector3Int(x.X, x.Y, 0))
                 .ToList();
 
-            playerView.MoveAlong(path);
+            targetIndicatorView?.Show(targetCell);
+        }
+
+        private void ClearHoverState()
+        {
+            _lastHoverStartCell = null;
+            _lastHoverTargetCell = null;
+            _cachedHoverPath.Clear();
+            targetIndicatorView?.Clear();
         }
     }
 }
