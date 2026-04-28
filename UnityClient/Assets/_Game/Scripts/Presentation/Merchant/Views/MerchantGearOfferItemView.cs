@@ -26,7 +26,7 @@ namespace Game.Presentation.Merchant.Views
             setText.text = string.IsNullOrWhiteSpace(offer.setName)
                 ? string.Empty
                 : $"{offer.setName} - {offer.threePieceBonusDescription}";
-            priceText.text = $"{offer.price}";
+            priceText.text = $"Price: {offer.price}";
             buyButtonText.text = offer.isSold ? "Sold" : "Buy";
             buyButton.interactable = !offer.isSold;
 

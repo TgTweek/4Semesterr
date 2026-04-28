@@ -20,9 +20,9 @@ namespace Game.Presentation.Merchant.Views
         {
             cardNameText.text = offer.cardName;
             rarityText.text = offer.rarity;
-            manaCostText.text = $"Mana: {offer.manaCost}";
+            manaCostText.text = $"ManaCost: {offer.manaCost}";
             effectText.text = $"{offer.effectType}: {offer.effectValue}";
-            priceText.text = $"{offer.price}";
+            priceText.text = $"Price: {offer.price}";
             buyButtonText.text = offer.isSold ? "Sold" : "Buy";
             buyButton.interactable = !offer.isSold;
 
