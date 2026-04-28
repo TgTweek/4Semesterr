@@ -15,7 +15,6 @@ namespace BackendApi.Infrastructure.Persistence
         public DbSet<Player> Players => Set<Player>();
         public DbSet<CardDefinition> CardDefinitions => Set<CardDefinition>();
         public DbSet<Merchant> Merchants => Set<Merchant>();
-        public DbSet<MerchantOffer> MerchantOffers => Set<MerchantOffer>();
         public DbSet<PlayerCard> PlayerCards => Set<PlayerCard>();
 
         public DbSet<GearDefinition> GearDefinitions => Set<GearDefinition>();
@@ -97,29 +96,7 @@ namespace BackendApi.Infrastructure.Persistence
                     .HasMaxLength(150);
             });
 
-            modelBuilder.Entity<MerchantOffer>(entity =>
-            {
-                entity.HasKey(x => x.MerchantOfferId);
-
-                entity.HasOne(x => x.Merchant)
-                    .WithMany(x => x.Offers)
-                    .HasForeignKey(x => x.MerchantId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(x => x.CardDefinition)
-                    .WithMany()
-                    .HasForeignKey(x => x.CardDefinitionId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.Property(x => x.Price)
-                    .IsRequired();
-
-                entity.Property(x => x.Stock)
-                    .IsRequired();
-
-                entity.Property(x => x.RowVersion)
-                    .IsRowVersion();
-            });
+           
 
             modelBuilder.Entity<PlayerCard>(entity =>
             {

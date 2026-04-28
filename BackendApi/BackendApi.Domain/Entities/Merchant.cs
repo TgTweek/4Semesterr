@@ -9,6 +9,5 @@ namespace BackendApi.Domain.Entities
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
 
-        public ICollection<MerchantOffer> Offers { get; set; } = new List<MerchantOffer>();
     }
 }
