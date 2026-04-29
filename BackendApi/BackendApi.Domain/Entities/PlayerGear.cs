@@ -12,6 +12,10 @@ namespace BackendApi.Domain.Entities
         public Guid GearDefinitionId { get; set; }
         public GearDefinition GearDefinition { get; set; } = null!;
 
+        public string Location { get; set; } = InventoryItemLocation.Stash;
+
         public DateTime AcquiredAtUtc { get; set; }
+
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     }
 }

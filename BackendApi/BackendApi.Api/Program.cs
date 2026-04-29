@@ -61,6 +61,7 @@ builder.Services.AddScoped<IStarterInventoryService, StarterInventoryService>();
 builder.Services.AddScoped<IPlayerService, PlayerService>();
 builder.Services.AddScoped<IRunRewardService, RunRewardService>();
 builder.Services.AddScoped<IMonsterService, MonsterService>();
+builder.Services.AddScoped<IPlayerInventoryService, PlayerInventoryService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
