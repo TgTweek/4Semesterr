@@ -58,6 +58,9 @@ builder.Services.AddScoped<GameDbSeeder>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IMerchantService, MerchantService>();
 builder.Services.AddScoped<IStarterInventoryService, StarterInventoryService>();
+builder.Services.AddScoped<IPlayerService, PlayerService>();
+builder.Services.AddScoped<IRunRewardService, RunRewardService>();
+builder.Services.AddScoped<IMonsterService, MonsterService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

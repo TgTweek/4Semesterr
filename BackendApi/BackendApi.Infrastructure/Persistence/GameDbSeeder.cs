@@ -1,7 +1,8 @@
-﻿using System.Reflection;
-using System.Text.Json;
-using BackendApi.Domain.Entities;
+﻿using BackendApi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Reflection;
+using System.Text.Json;
 
 namespace BackendApi.Infrastructure.Persistence
 {
@@ -25,6 +26,7 @@ namespace BackendApi.Infrastructure.Persistence
             await SeedCardDefinitionsAsync();
             await SeedGearSetDefinitionsAsync();
             await SeedGearDefinitionsAsync();
+            await SeedMonstersAsync();
 
             await _dbContext.SaveChangesAsync();
         }
@@ -143,6 +145,36 @@ namespace BackendApi.Infrastructure.Persistence
             }
         }
 
+        private async Task SeedMonstersAsync()
+        {
+            var seedItems = ReadEmbeddedJson<List<MonsterSeedModel>>("monsters.json");
+
+            var existingByKey = await _dbContext.MonsterDefinitions
+                .ToDictionaryAsync(x => x.MonsterKey);
+
+            foreach (var item in seedItems)
+            {
+                if (!existingByKey.TryGetValue(item.MonsterKey, out var entity))
+                {
+                    entity = new MonsterDefinition
+                    {
+                        MonsterDefinitionId = Guid.NewGuid(),
+                        MonsterKey = item.MonsterKey
+                    };
+
+                    _dbContext.MonsterDefinitions.Add(entity);
+                    existingByKey[item.MonsterKey] = entity;
+                }
+
+                entity.Name = item.Name;
+                entity.MaxHealth = item.MaxHealth;
+                entity.Damage = item.Damage;
+                entity.Mana = item.Mana;
+                entity.GoldReward = item.GoldReward;
+                entity.ExperienceReward = item.ExperienceReward;
+            }
+        }
+
         private static T ReadEmbeddedJson<T>(string fileName)
         {
             var assembly = typeof(GameDbSeeder).Assembly;
@@ -217,6 +249,17 @@ namespace BackendApi.Infrastructure.Persistence
             public string? SetKey { get; set; }
             public string IconKey { get; set; } = string.Empty;
             public bool IsMerchantAvailable { get; set; }
+        }
+
+        private sealed class MonsterSeedModel
+        {
+            public string MonsterKey { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public int MaxHealth { get; set; }
+            public int Damage { get; set; }
+            public int Mana { get; set; }
+            public int GoldReward { get; set; }
+            public int ExperienceReward { get; set; }
         }
     }
 }

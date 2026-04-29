@@ -19,10 +19,10 @@ namespace BackendApi.Api.Controllers
         private readonly IStarterInventoryService _starterInventoryService;
 
         public AuthController(
-    UserManager<AppUser> userManager,
-    GameDbContext dbContext,
-    IJwtTokenService jwtTokenService,
-    IStarterInventoryService starterInventoryService)
+            UserManager<AppUser> userManager,
+            GameDbContext dbContext,
+            IJwtTokenService jwtTokenService,
+            IStarterInventoryService starterInventoryService)
         {
             _userManager = userManager;
             _dbContext = dbContext;
@@ -61,7 +61,11 @@ namespace BackendApi.Api.Controllers
                 AppUserId = appUser.Id,
                 PlayerName = request.PlayerName,
                 Level = 1,
-                DaluMoney = 200
+                DaluMoney = 200,
+                Experience = 0,
+                DamageBonus = 0,
+                BaseMaxHealth = 30,
+                BaseMaxMana = 3
             };
 
             _dbContext.Players.Add(player);
@@ -70,10 +74,10 @@ namespace BackendApi.Api.Controllers
             await _starterInventoryService.GrantStarterCardsAsync(player.PlayerId);
 
             var token = _jwtTokenService.CreateAccessToken(
-               appUser.Id,
-               appUser.Email ?? string.Empty,
-               player.PlayerId,
-               player.PlayerName);
+                appUser.Id,
+                appUser.Email ?? string.Empty,
+                player.PlayerId,
+                player.PlayerName);
 
             return Ok(new AuthResponseDto
             {
@@ -108,10 +112,10 @@ namespace BackendApi.Api.Controllers
             }
 
             var token = _jwtTokenService.CreateAccessToken(
-    appUser.Id,
-    appUser.Email ?? string.Empty,
-    player.PlayerId,
-    player.PlayerName);
+                appUser.Id,
+                appUser.Email ?? string.Empty,
+                player.PlayerId,
+                player.PlayerName);
 
             return Ok(new AuthResponseDto
             {

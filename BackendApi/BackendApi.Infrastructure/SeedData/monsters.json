@@ -1,0 +1,29 @@
+﻿[
+  {
+    "monsterKey": "green_slime",
+    "name": "Green Slime",
+    "maxHealth": 18,
+    "damage": 4,
+    "mana": 0,
+    "goldReward": 8,
+    "experienceReward": 15
+  },
+  {
+    "monsterKey": "cave_spider",
+    "name": "Cave Spider",
+    "maxHealth": 22,
+    "damage": 5,
+    "mana": 0,
+    "goldReward": 10,
+    "experienceReward": 18
+  },
+  {
+    "monsterKey": "skeleton_guard",
+    "name": "Skeleton Guard",
+    "maxHealth": 28,
+    "damage": 6,
+    "mana": 0,
+    "goldReward": 14,
+    "experienceReward": 24
+  }
+]

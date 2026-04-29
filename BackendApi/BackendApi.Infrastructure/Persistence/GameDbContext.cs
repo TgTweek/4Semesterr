@@ -13,6 +13,7 @@ namespace BackendApi.Infrastructure.Persistence
         }
 
         public DbSet<Player> Players => Set<Player>();
+        public DbSet<MonsterDefinition> MonsterDefinitions => Set<MonsterDefinition>();
         public DbSet<CardDefinition> CardDefinitions => Set<CardDefinition>();
         public DbSet<Merchant> Merchants => Set<Merchant>();
         public DbSet<MerchantOffer> MerchantOffers => Set<MerchantOffer>();
@@ -37,10 +38,28 @@ namespace BackendApi.Infrastructure.Persistence
                     .HasMaxLength(50);
 
                 entity.Property(x => x.Level)
-                    .IsRequired();
+                    .IsRequired()
+                    .HasDefaultValue(1);
 
                 entity.Property(x => x.DaluMoney)
-                    .IsRequired();
+                    .IsRequired()
+                    .HasDefaultValue(200);
+
+                entity.Property(x => x.Experience)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                entity.Property(x => x.DamageBonus)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                entity.Property(x => x.BaseMaxHealth)
+                    .IsRequired()
+                    .HasDefaultValue(30);
+
+                entity.Property(x => x.BaseMaxMana)
+                    .IsRequired()
+                    .HasDefaultValue(3);
 
                 entity.Property(x => x.RowVersion)
                     .IsRowVersion();
@@ -55,6 +74,37 @@ namespace BackendApi.Infrastructure.Persistence
                     .WithOne()
                     .HasForeignKey<Player>(x => x.AppUserId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<MonsterDefinition>(entity =>
+            {
+                entity.HasKey(x => x.MonsterDefinitionId);
+
+                entity.Property(x => x.MonsterKey)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.HasIndex(x => x.MonsterKey)
+                    .IsUnique();
+
+                entity.Property(x => x.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(x => x.MaxHealth)
+                    .IsRequired();
+
+                entity.Property(x => x.Damage)
+                    .IsRequired();
+
+                entity.Property(x => x.Mana)
+                    .IsRequired();
+
+                entity.Property(x => x.GoldReward)
+                    .IsRequired();
+
+                entity.Property(x => x.ExperienceReward)
+                    .IsRequired();
             });
 
             modelBuilder.Entity<CardDefinition>(entity =>
