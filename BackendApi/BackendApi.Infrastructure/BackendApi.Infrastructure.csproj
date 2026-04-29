@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="SeedData\monsters.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
@@ -24,5 +28,6 @@
 		<EmbeddedResource Include="SeedData\cards.json" />
 		<EmbeddedResource Include="SeedData\gear-sets.json" />
 		<EmbeddedResource Include="SeedData\gear.json" />
+		<EmbeddedResource Include="SeedData\monsters.json" />
 	</ItemGroup>
 </Project>
