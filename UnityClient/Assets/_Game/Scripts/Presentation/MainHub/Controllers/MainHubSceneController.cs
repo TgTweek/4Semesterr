@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Game.Presentation.Merchant.Controllers;
+using Game.Presentation.Inventory.Controllers;
 
 namespace Game.Presentation.MainHub.Controllers
 {
@@ -33,6 +34,10 @@ namespace Game.Presentation.MainHub.Controllers
         [Header("Actions")]
         [SerializeField] private Button startRunButton = null!;
 
+        [Header("Inventory Controllers")]
+        [SerializeField] private InventoryPanelScript houseInventoryPanelScript = null!;
+        [SerializeField] private InventoryPanelScript chestInventoryPanelScript = null!;
+
         private void Awake()
         {
             merchantHotspotButton.onClick.AddListener(OpenMerchantPanel);
@@ -56,14 +61,16 @@ namespace Game.Presentation.MainHub.Controllers
             await merchantPanelScript.LoadInventoryAsync();
         }
 
-        private void OpenHousePanel()
+        private async void OpenHousePanel()
         {
             ShowOnlyPanel(housePanel);
+            await houseInventoryPanelScript.LoadInventoryAsync();
         }
 
-        private void OpenChestPanel()
+        private async void OpenChestPanel()
         {
             ShowOnlyPanel(chestPanel);
+            await chestInventoryPanelScript.LoadInventoryAsync();
         }
 
         private void OpenWorldMapPanel()
