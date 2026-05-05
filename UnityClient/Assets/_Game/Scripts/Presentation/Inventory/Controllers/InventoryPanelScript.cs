@@ -112,15 +112,15 @@ namespace Game.Presentation.Inventory.Controllers
                 .OrderBy(x => x.cardName)
                 .ToList();
 
-            loadoutCardsSection.SetActive(showLoadoutSections);
-            stashCardsSection.SetActive(showStashSections);
+            SetActiveIfAssigned(loadoutCardsSection, showLoadoutSections);
+            SetActiveIfAssigned(stashCardsSection, showStashSections);
 
             if (cardLoadoutCountText != null)
             {
                 cardLoadoutCountText.text = $"Loadout Cards: {loadoutCards.Count}/10";
             }
 
-            if (showLoadoutSections)
+            if (showLoadoutSections && loadoutCardsContentParent != null)
             {
                 foreach (var card in loadoutCards)
                 {
@@ -129,7 +129,7 @@ namespace Game.Presentation.Inventory.Controllers
                 }
             }
 
-            if (showStashSections)
+            if (showStashSections && stashCardsContentParent != null)
             {
                 foreach (var card in stashCards)
                 {
@@ -155,10 +155,10 @@ namespace Game.Presentation.Inventory.Controllers
                 .ThenBy(x => x.gearName)
                 .ToList();
 
-            equippedGearSection.SetActive(showLoadoutSections);
-            stashGearSection.SetActive(showStashSections);
+            SetActiveIfAssigned(equippedGearSection, showLoadoutSections);
+            SetActiveIfAssigned(stashGearSection, showStashSections);
 
-            if (showLoadoutSections)
+            if (showLoadoutSections && equippedGearContentParent != null)
             {
                 foreach (var gearItem in equippedGear)
                 {
@@ -167,7 +167,7 @@ namespace Game.Presentation.Inventory.Controllers
                 }
             }
 
-            if (showStashSections)
+            if (showStashSections && stashGearContentParent != null)
             {
                 foreach (var gearItem in stashGear)
                 {
@@ -328,6 +328,13 @@ namespace Game.Presentation.Inventory.Controllers
             };
         }
 
+        private static void SetActiveIfAssigned(GameObject gameObject, bool active)
+        {
+            if (gameObject != null)
+            {
+                gameObject.SetActive(active);
+            }
+        }
         private static void ClearChildren(Transform parent)
         {
             if (parent == null)
