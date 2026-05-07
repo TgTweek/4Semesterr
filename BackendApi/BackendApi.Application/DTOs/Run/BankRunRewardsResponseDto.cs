@@ -8,11 +8,13 @@
         public int TotalGold { get; set; }
 
         public int NewLevel { get; set; }
+        public int MaxLevel { get; set; }
         public int TotalExperience { get; set; }
         public int ExperienceRequiredForNextLevel { get; set; }
 
         public int DamageBonus { get; set; }
-        public int BaseMaxHealth { get; set; } 
+        public int BaseMaxHealth { get; set; }
         public int BaseMaxMana { get; set; }
+        public int MovementTilesPerTurn { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using BackendApi.Application.DTOs.Player;
 using BackendApi.Application.Interfaces;
+using BackendApi.Domain.Services;
 using BackendApi.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,18 +30,15 @@ namespace BackendApi.Infrastructure.Services
                 PlayerId = player.PlayerId,
                 PlayerName = player.PlayerName,
                 Level = player.Level,
+                MaxLevel = PlayerProgressionRules.MaxLevel,
                 Experience = player.Experience,
-                ExperienceRequiredForNextLevel = GetRequiredExperienceForNextLevel(player.Level),
+                ExperienceRequiredForNextLevel = PlayerProgressionRules.GetRequiredExperienceForNextLevel(player.Level),
                 DaluMoney = player.DaluMoney,
-                DamageBonus = player.DamageBonus,
-                BaseMaxHealth = player.BaseMaxHealth,
-                BaseMaxMana = player.BaseMaxMana
+                DamageBonus = PlayerProgressionRules.GetDamageBonus(player.Level),
+                BaseMaxHealth = PlayerProgressionRules.GetBaseMaxHealth(player.Level),
+                BaseMaxMana = PlayerProgressionRules.GetBaseMaxMana(player.Level),
+                MovementTilesPerTurn = PlayerProgressionRules.GetMovementTilesPerTurn(player.Level)
             };
-        }
-
-        private static int GetRequiredExperienceForNextLevel(int currentLevel)
-        {
-            return 50 + ((currentLevel - 1) * 25);
         }
     }
 }
