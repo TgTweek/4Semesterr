@@ -8,6 +8,7 @@ namespace BackendApi.Application.DTOs.Player
         public string PlayerName { get; set; } = string.Empty;
 
         public int Level { get; set; }
+        public int MaxLevel { get; set; }
         public int Experience { get; set; }
         public int ExperienceRequiredForNextLevel { get; set; }
 
@@ -16,5 +17,6 @@ namespace BackendApi.Application.DTOs.Player
         public int DamageBonus { get; set; }
         public int BaseMaxHealth { get; set; }
         public int BaseMaxMana { get; set; }
+        public int MovementTilesPerTurn { get; set; }
     }
 }

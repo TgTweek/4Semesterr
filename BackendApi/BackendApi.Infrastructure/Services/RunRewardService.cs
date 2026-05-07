@@ -1,5 +1,6 @@
 ﻿using BackendApi.Application.DTOs.Run;
 using BackendApi.Application.Interfaces;
+using BackendApi.Domain.Services;
 using BackendApi.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,15 +30,24 @@ namespace BackendApi.Infrastructure.Services
                 throw new InvalidOperationException("Player not found.");
 
             player.DaluMoney += request.GoldEarned;
-            player.Experience += request.ExperienceEarned;
 
-            while (player.Experience >= GetRequiredExperienceForNextLevel(player.Level))
+            if (player.Level < PlayerProgressionRules.MaxLevel)
             {
-                var requiredXp = GetRequiredExperienceForNextLevel(player.Level);
-                player.Experience -= requiredXp;
-                player.Level++;
+                player.Experience += request.ExperienceEarned;
 
-                ApplyLevelUp(player);
+                while (player.Level < PlayerProgressionRules.MaxLevel &&
+                       player.Experience >= PlayerProgressionRules.GetRequiredExperienceForNextLevel(player.Level))
+                {
+                    var requiredXp = PlayerProgressionRules.GetRequiredExperienceForNextLevel(player.Level);
+                    player.Experience -= requiredXp;
+                    player.Level++;
+                }
+
+                if (player.Level >= PlayerProgressionRules.MaxLevel)
+                {
+                    player.Level = PlayerProgressionRules.MaxLevel;
+                    player.Experience = 0;
+                }
             }
 
             await _dbContext.SaveChangesAsync();
@@ -48,32 +58,14 @@ namespace BackendApi.Infrastructure.Services
                 ExperienceEarned = request.ExperienceEarned,
                 TotalGold = player.DaluMoney,
                 NewLevel = player.Level,
+                MaxLevel = PlayerProgressionRules.MaxLevel,
                 TotalExperience = player.Experience,
-                ExperienceRequiredForNextLevel = GetRequiredExperienceForNextLevel(player.Level),
-                DamageBonus = player.DamageBonus,
-                BaseMaxHealth = player.BaseMaxHealth,
-                BaseMaxMana = player.BaseMaxMana
+                ExperienceRequiredForNextLevel = PlayerProgressionRules.GetRequiredExperienceForNextLevel(player.Level),
+                DamageBonus = PlayerProgressionRules.GetDamageBonus(player.Level),
+                BaseMaxHealth = PlayerProgressionRules.GetBaseMaxHealth(player.Level),
+                BaseMaxMana = PlayerProgressionRules.GetBaseMaxMana(player.Level),
+                MovementTilesPerTurn = PlayerProgressionRules.GetMovementTilesPerTurn(player.Level)
             };
-        }
-
-        private static void ApplyLevelUp(BackendApi.Domain.Entities.Player player)
-        {
-            player.BaseMaxHealth += 4;
-
-            if (player.Level % 2 == 0)
-            {
-                player.DamageBonus += 1;
-            }
-
-            if (player.Level % 4 == 0)
-            {
-                player.BaseMaxMana += 1;
-            }
-        }
-
-        private static int GetRequiredExperienceForNextLevel(int currentLevel)
-        {
-            return 50 + ((currentLevel - 1) * 25);
         }
     }
 }
