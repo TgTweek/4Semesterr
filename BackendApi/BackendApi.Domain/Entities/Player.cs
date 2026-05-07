@@ -19,5 +19,7 @@ namespace BackendApi.Domain.Entities
         public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         public ICollection<PlayerCard> OwnedCards { get; set; } = new List<PlayerCard>();
+        public ICollection<PlayerGear> OwnedGear { get; set; } = new List<PlayerGear>();
+
     }
 }

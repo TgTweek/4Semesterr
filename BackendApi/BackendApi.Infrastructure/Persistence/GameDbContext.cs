@@ -65,6 +65,16 @@ namespace BackendApi.Infrastructure.Persistence
 
                 entity.HasIndex(x => x.AppUserId)
                     .IsUnique();
+
+                entity.HasMany(x => x.OwnedCards)
+                    .WithOne(x => x.Player)
+                    .HasForeignKey(x => x.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(x => x.OwnedGear)
+                    .WithOne(x => x.Player)
+                    .HasForeignKey(x => x.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<AppUser>(entity =>
@@ -146,7 +156,7 @@ namespace BackendApi.Infrastructure.Persistence
                     .HasMaxLength(150);
             });
 
-           
+
 
             modelBuilder.Entity<PlayerCard>(entity =>
             {
@@ -162,8 +172,23 @@ namespace BackendApi.Infrastructure.Persistence
                     .HasForeignKey(x => x.CardDefinitionId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.Property(x => x.Location)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(x => x.LoadoutOrder);
+
                 entity.Property(x => x.AcquiredAtUtc)
                     .IsRequired();
+
+                entity.Property(x => x.RowVersion)
+                    .IsRowVersion();
+
+                entity.HasIndex(x => new { x.PlayerId, x.Location });
+
+                entity.HasIndex(x => new { x.PlayerId, x.LoadoutOrder })
+                    .IsUnique()
+                    .HasFilter("[LoadoutOrder] IS NOT NULL");
             });
 
             modelBuilder.Entity<GearDefinition>(entity =>
@@ -232,7 +257,7 @@ namespace BackendApi.Infrastructure.Persistence
                 entity.HasKey(x => x.PlayerGearId);
 
                 entity.HasOne(x => x.Player)
-                    .WithMany()
+                    .WithMany(x => x.OwnedGear)
                     .HasForeignKey(x => x.PlayerId)
                     .OnDelete(DeleteBehavior.Cascade);
 
@@ -241,8 +266,17 @@ namespace BackendApi.Infrastructure.Persistence
                     .HasForeignKey(x => x.GearDefinitionId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.Property(x => x.Location)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
                 entity.Property(x => x.AcquiredAtUtc)
                     .IsRequired();
+
+                entity.Property(x => x.RowVersion)
+                    .IsRowVersion();
+
+                entity.HasIndex(x => new { x.PlayerId, x.Location });
             });
 
             modelBuilder.Entity<PlayerMerchantCardOffer>(entity =>

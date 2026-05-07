@@ -12,6 +12,12 @@ namespace BackendApi.Domain.Entities
         public Guid CardDefinitionId { get; set; }
         public CardDefinition CardDefinition { get; set; } = null!;
 
+        public string Location { get; set; } = InventoryItemLocation.Stash;
+
+        public int? LoadoutOrder { get; set; }
+
         public DateTime AcquiredAtUtc { get; set; }
+
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     }
 }

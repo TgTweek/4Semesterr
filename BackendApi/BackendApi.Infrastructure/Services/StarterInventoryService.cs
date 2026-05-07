@@ -45,6 +45,9 @@ namespace BackendApi.Infrastructure.Services
                     $"Starter card definition '{StarterBlockKey}' was not found.");
             }
 
+            var loadoutOrder = 1;
+            var acquiredAtUtc = DateTime.UtcNow;
+
             for (var i = 0; i < 3; i++)
             {
                 _dbContext.PlayerCards.Add(new PlayerCard
@@ -52,8 +55,12 @@ namespace BackendApi.Infrastructure.Services
                     PlayerCardId = Guid.NewGuid(),
                     PlayerId = playerId,
                     CardDefinitionId = strikeDefinition.CardDefinitionId,
-                    AcquiredAtUtc = DateTime.UtcNow
+                    Location = InventoryItemLocation.Loadout,
+                    LoadoutOrder = loadoutOrder,
+                    AcquiredAtUtc = acquiredAtUtc
                 });
+
+                loadoutOrder++;
             }
 
             for (var i = 0; i < 3; i++)
@@ -63,8 +70,12 @@ namespace BackendApi.Infrastructure.Services
                     PlayerCardId = Guid.NewGuid(),
                     PlayerId = playerId,
                     CardDefinitionId = blockDefinition.CardDefinitionId,
-                    AcquiredAtUtc = DateTime.UtcNow
+                    Location = InventoryItemLocation.Loadout,
+                    LoadoutOrder = loadoutOrder,
+                    AcquiredAtUtc = acquiredAtUtc
                 });
+
+                loadoutOrder++;
             }
 
             await _dbContext.SaveChangesAsync();

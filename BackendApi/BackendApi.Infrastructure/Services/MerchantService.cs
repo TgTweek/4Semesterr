@@ -84,6 +84,8 @@ namespace BackendApi.Infrastructure.Services
                 PlayerCardId = Guid.NewGuid(),
                 PlayerId = player.PlayerId,
                 CardDefinitionId = offer.CardDefinitionId,
+                Location = InventoryItemLocation.Stash,
+                LoadoutOrder = null,
                 AcquiredAtUtc = DateTime.UtcNow
             });
 
@@ -156,6 +158,7 @@ namespace BackendApi.Infrastructure.Services
                 PlayerGearId = Guid.NewGuid(),
                 PlayerId = player.PlayerId,
                 GearDefinitionId = offer.GearDefinitionId,
+                Location = InventoryItemLocation.Stash,
                 AcquiredAtUtc = DateTime.UtcNow
             });
 
