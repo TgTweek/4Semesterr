@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using Game.Infrastructure.Auth;
 using Game.Presentation.Merchant.Controllers;
 using Game.Presentation.Inventory.Controllers;
 
@@ -7,6 +9,10 @@ namespace Game.Presentation.MainHub.Controllers
 {
     public sealed class MainHubSceneController : MonoBehaviour
     {
+        [Header("Scenes")]
+        [SerializeField] private string boardSceneName = "MainGameBoard";
+        [SerializeField] private string loginSceneName = "Login";
+
         [Header("Overlay")]
         [SerializeField] private GameObject dimOverlay = null!;
 
@@ -38,8 +44,25 @@ namespace Game.Presentation.MainHub.Controllers
         [SerializeField] private InventoryPanelScript houseInventoryPanelScript = null!;
         [SerializeField] private InventoryPanelScript chestInventoryPanelScript = null!;
 
+        private AuthTokenStore _authTokenStore = null!;
+        private bool _isBusy;
+
         private void Awake()
         {
+            _authTokenStore = new AuthTokenStore();
+
+            merchantHotspotButton.onClick.RemoveAllListeners();
+            houseHotspotButton.onClick.RemoveAllListeners();
+            chestHotspotButton.onClick.RemoveAllListeners();
+            worldMapHotspotButton.onClick.RemoveAllListeners();
+
+            merchantCloseButton.onClick.RemoveAllListeners();
+            houseCloseButton.onClick.RemoveAllListeners();
+            chestCloseButton.onClick.RemoveAllListeners();
+            worldMapCloseButton.onClick.RemoveAllListeners();
+
+            startRunButton.onClick.RemoveAllListeners();
+
             merchantHotspotButton.onClick.AddListener(OpenMerchantPanel);
             houseHotspotButton.onClick.AddListener(OpenHousePanel);
             chestHotspotButton.onClick.AddListener(OpenChestPanel);
@@ -57,24 +80,32 @@ namespace Game.Presentation.MainHub.Controllers
 
         private async void OpenMerchantPanel()
         {
+            if (_isBusy) return;
+
             ShowOnlyPanel(merchantPanel);
             await merchantPanelScript.LoadInventoryAsync();
         }
 
         private async void OpenHousePanel()
         {
+            if (_isBusy) return;
+
             ShowOnlyPanel(housePanel);
             await houseInventoryPanelScript.LoadInventoryAsync();
         }
 
         private async void OpenChestPanel()
         {
+            if (_isBusy) return;
+
             ShowOnlyPanel(chestPanel);
             await chestInventoryPanelScript.LoadInventoryAsync();
         }
 
         private void OpenWorldMapPanel()
         {
+            if (_isBusy) return;
+
             ShowOnlyPanel(worldMapPanel);
         }
 
@@ -102,7 +133,20 @@ namespace Game.Presentation.MainHub.Controllers
 
         private void OnStartRunClicked()
         {
-            Debug.Log("Start Run clicked. World/run flow is not implemented yet.");
+            if (_isBusy)
+            {
+                return;
+            }
+
+            if (!_authTokenStore.HasAccessToken())
+            {
+                Debug.LogWarning("No access token found. Redirecting to login.");
+                SceneManager.LoadScene(loginSceneName);
+                return;
+            }
+
+            _isBusy = true;
+            SceneManager.LoadScene(boardSceneName);
         }
     }
 }

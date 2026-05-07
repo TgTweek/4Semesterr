@@ -3,6 +3,7 @@ using System.Linq;
 using Game.Application.Movement.Commands;
 using Game.Application.Movement.UseCases;
 using Game.Presentation.Common.Movement.Views;
+using Game.Presentation.Combat.Controllers;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -11,12 +12,13 @@ namespace Game.Presentation.Common.Movement.Controllers
 {
     public sealed class ClickToMoveController : MonoBehaviour
     {
-        [SerializeField] private Camera worldCamera;
-        [SerializeField] private Grid grid;
-        [SerializeField] private TilemapPlayerView playerView;
-        [SerializeField] private MovementTargetIndicatorView targetIndicatorView;
+        [SerializeField] private Camera worldCamera = null!;
+        [SerializeField] private Grid grid = null!;
+        [SerializeField] private TilemapPlayerView playerView = null!;
+        [SerializeField] private MovementTargetIndicatorView targetIndicatorView = null!;
+        [SerializeField] private BoardCombatController boardCombatController = null!;
 
-        private FindPathToCellUseCase _findPathToCellUseCase;
+        private FindPathToCellUseCase _findPathToCellUseCase = null!;
 
         private Vector3Int? _lastHoverStartCell;
         private Vector3Int? _lastHoverTargetCell;
@@ -44,6 +46,12 @@ namespace Game.Presentation.Common.Movement.Controllers
                 return;
             }
 
+            if (boardCombatController != null && !boardCombatController.CanUseMovementInput())
+            {
+                ClearHoverState();
+                return;
+            }
+
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 ClearHoverState();
@@ -65,6 +73,13 @@ namespace Game.Presentation.Common.Movement.Controllers
             }
 
             if (_cachedHoverPath.Count == 0)
+            {
+                return;
+            }
+
+            var movementCost = Mathf.Max(0, _cachedHoverPath.Count - 1);
+
+            if (boardCombatController != null && !boardCombatController.TryConsumeMovement(movementCost))
             {
                 return;
             }

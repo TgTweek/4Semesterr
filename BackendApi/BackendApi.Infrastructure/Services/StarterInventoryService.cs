@@ -61,7 +61,7 @@ namespace BackendApi.Infrastructure.Services
                 });
 
                 loadoutOrder++;
-            }
+            } 
 
             for (var i = 0; i < 3; i++)
             {
