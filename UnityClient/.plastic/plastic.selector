@@ -1,4 +1,3 @@
 repository "4Semester/4Semester@5773986749985@cloud"
   path "/"
-    br "/main"
-    co "/main"
+    smartbranch "/main/Lukas"

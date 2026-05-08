@@ -1,17 +1,26 @@
+using System;
+using System.Threading.Tasks;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using Game.Infrastructure.Auth;
-using Game.Presentation.Merchant.Controllers;
+using Game.Infrastructure.Api.Player;
+using Game.Infrastructure.Api.Dtos.Player;
 using Game.Presentation.Inventory.Controllers;
+using Game.Presentation.Merchant.Controllers;
+using Game.Infrastructure.Run;
 
 namespace Game.Presentation.MainHub.Controllers
 {
     public sealed class MainHubSceneController : MonoBehaviour
     {
         [Header("Scenes")]
-        [SerializeField] private string boardSceneName = "MainGameBoard";
+        [SerializeField] private string inGameMapSceneName = "InGameMap";
         [SerializeField] private string loginSceneName = "Login";
+
+        [Header("API")]
+        [SerializeField] private string apiBaseUrl = "https://localhost:7038";
 
         [Header("Overlay")]
         [SerializeField] private GameObject dimOverlay = null!;
@@ -44,13 +53,23 @@ namespace Game.Presentation.MainHub.Controllers
         [SerializeField] private InventoryPanelScript houseInventoryPanelScript = null!;
         [SerializeField] private InventoryPanelScript chestInventoryPanelScript = null!;
 
+        [Header("Player HUD")]
+        [SerializeField] private TMP_Text goldText = null!;
+        [SerializeField] private TMP_Text levelText = null!;
+        [SerializeField] private TMP_Text xpText = null!;
+        [SerializeField] private Image xpFillImage = null!;
+
         private AuthTokenStore _authTokenStore = null!;
+        private RunSessionStore _runSessionStore = null!;
+        private PlayerApiGateway _playerApiGateway = null!;
         private bool _isBusy;
 
         private void Awake()
         {
             _authTokenStore = new AuthTokenStore();
+            _runSessionStore = new RunSessionStore();
 
+            _playerApiGateway = new PlayerApiGateway(apiBaseUrl, _authTokenStore);
             merchantHotspotButton.onClick.RemoveAllListeners();
             houseHotspotButton.onClick.RemoveAllListeners();
             chestHotspotButton.onClick.RemoveAllListeners();
@@ -75,7 +94,26 @@ namespace Game.Presentation.MainHub.Controllers
 
             startRunButton.onClick.AddListener(OnStartRunClicked);
 
+            if (merchantPanelScript != null)
+            {
+                merchantPanelScript.PurchaseCompleted += OnMerchantPurchaseCompleted;
+            }
+
+            SetDefaultPlayerHud();
             CloseAllPanels();
+        }
+
+        private async void Start()
+        {
+            await RefreshPlayerHudAsync();
+        }
+
+        private void OnDestroy()
+        {
+            if (merchantPanelScript != null)
+            {
+                merchantPanelScript.PurchaseCompleted -= OnMerchantPurchaseCompleted;
+            }
         }
 
         private async void OpenMerchantPanel()
@@ -146,7 +184,66 @@ namespace Game.Presentation.MainHub.Controllers
             }
 
             _isBusy = true;
-            SceneManager.LoadScene(boardSceneName);
+
+            _runSessionStore.StartNewRun();
+
+            SceneManager.LoadScene(inGameMapSceneName);
+        }
+
+        private async void OnMerchantPurchaseCompleted()
+        {
+            await RefreshPlayerHudAsync();
+        }
+
+        private async Task RefreshPlayerHudAsync()
+        {
+            if (!_authTokenStore.HasAccessToken())
+            {
+                SetDefaultPlayerHud();
+                return;
+            }
+
+            try
+            {
+                var player = await _playerApiGateway.GetCurrentPlayerAsync();
+                ApplyPlayerHud(player);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to load player HUD: {ex.Message}");
+                SetDefaultPlayerHud();
+            }
+        }
+
+        private void SetDefaultPlayerHud()
+        {
+            goldText.text = "Gold: --";
+            levelText.text = "Level: --";
+            xpText.text = "XP: -- / --";
+
+            if (xpFillImage != null)
+            {
+                xpFillImage.fillAmount = 0f;
+            }
+        }
+
+        private void ApplyPlayerHud(PlayerDto player)
+        {
+            goldText.text = $"Gold: {player.daluMoney}";
+            levelText.text = $"Level: {player.level}";
+
+            if (player.maxLevel > 0 && player.level >= player.maxLevel)
+            {
+                xpText.text = "XP: MAX";
+                xpFillImage.fillAmount = 1f;
+                return;
+            }
+
+            var required = Mathf.Max(1, player.experienceRequiredForNextLevel);
+            var current = Mathf.Clamp(player.experience, 0, required);
+
+            xpText.text = $"XP: {current} / {required}";
+            xpFillImage.fillAmount = Mathf.Clamp01((float)current / required);
         }
     }
 }

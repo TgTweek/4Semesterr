@@ -4,6 +4,6 @@ namespace BackendApi.Application.Interfaces
 {
     public interface IRunRewardService
     {
-        Task<BankRunRewardsResponseDto> BankRewardsAsync(Guid playerId, BankRunRewardsRequestDto request);
+        Task<CompleteRunResponseDto> CompleteRunAsync(Guid appUserId, CompleteRunRequestDto request);
     }
 }

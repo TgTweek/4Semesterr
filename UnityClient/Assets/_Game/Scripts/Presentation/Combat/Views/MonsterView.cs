@@ -22,6 +22,11 @@ namespace Game.Presentation.Combat.Views
 
         public void SetSprite(Sprite sprite)
         {
+            if (spriteRenderer == null)
+            {
+                return;
+            }
+
             if (sprite != null)
             {
                 spriteRenderer.sprite = sprite;
@@ -35,12 +40,22 @@ namespace Game.Presentation.Combat.Views
                 return;
             }
 
-            nameText.text = _runtimeState.Name;
-            healthText.text = $"{_runtimeState.CurrentHealth}/{_runtimeState.MaxHealth}";
+            if (nameText != null)
+            {
+                nameText.text = _runtimeState.Name;
+            }
 
-            spriteRenderer.color = _runtimeState.IsDead
-                ? new Color(1f, 1f, 1f, 0.35f)
-                : Color.white;
+            if (healthText != null)
+            {
+                healthText.text = $"{_runtimeState.CurrentHealth}/{_runtimeState.MaxHealth}";
+            }
+
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = _runtimeState.IsDead
+                    ? new Color(1f, 1f, 1f, 0.35f)
+                    : Color.white;
+            }
         }
     }
 }

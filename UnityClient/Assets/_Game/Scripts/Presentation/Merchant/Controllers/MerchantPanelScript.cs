@@ -36,6 +36,8 @@ namespace Game.Presentation.Merchant.Controllers
         [Header("Status")]
         [SerializeField] private TMP_Text errorText = null!;
 
+        public event Action PurchaseCompleted = delegate { };
+
         private MerchantApiClient _merchantApiClient = null!;
 
         private void Awake()
@@ -115,6 +117,7 @@ namespace Game.Presentation.Merchant.Controllers
                 }
 
                 await LoadInventoryAsync();
+                PurchaseCompleted.Invoke();
             }
             catch (Exception ex)
             {
@@ -137,6 +140,7 @@ namespace Game.Presentation.Merchant.Controllers
                 }
 
                 await LoadInventoryAsync();
+                PurchaseCompleted.Invoke();
             }
             catch (Exception ex)
             {

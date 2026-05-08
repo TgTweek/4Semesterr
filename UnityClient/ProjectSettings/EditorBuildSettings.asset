@@ -12,6 +12,9 @@ EditorBuildSettings:
     path: Assets/_Game/Scenes/MainHub/MainHub.unity
     guid: 26ff119200ccbba47b730c8ac913b938
   - enabled: 1
+    path: Assets/_Game/Scenes/Combat/InGameMap.unity
+    guid: 43c4dab302394b740956c2c1b8215a7c
+  - enabled: 1
     path: Assets/_Game/Scenes/MainGameBoard.unity
     guid: 965598292f1010245b184493439c418c
   m_configObjects:

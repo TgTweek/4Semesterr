@@ -13,10 +13,12 @@ using Game.Infrastructure.Api.Dtos.Inventory;
 using Game.Infrastructure.Api.Inventory;
 using Game.Infrastructure.Api.Player;
 using Game.Infrastructure.Auth;
+using Game.Infrastructure.Run;
 using Game.Presentation.Combat.Views;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Game.Presentation.Combat.Controllers
@@ -32,6 +34,10 @@ namespace Game.Presentation.Combat.Controllers
 
         [Header("API")]
         [SerializeField] private string baseUrl = "https://localhost:7038";
+
+        [Header("Scenes")]
+        [SerializeField] private string inGameMapSceneName = "InGameMap";
+        [SerializeField] private float combatResultDelaySeconds = 0.8f;
 
         [Header("Scene references")]
         [SerializeField] private Camera worldCamera = null!;
@@ -61,6 +67,8 @@ namespace Game.Presentation.Combat.Controllers
         [SerializeField] private float enemyTurnDelaySeconds = 0.35f;
 
         private AuthTokenStore _authTokenStore = null!;
+        private RunSessionStore _runSessionStore = null!;
+
         private PlayerApiGateway _playerApiGateway = null!;
         private MonsterApiGateway _monsterApiGateway = null!;
         private PlayerInventoryApiClient _playerInventoryApiClient = null!;
@@ -69,6 +77,7 @@ namespace Game.Presentation.Combat.Controllers
         private CastSpellAtMonsterUseCase _castSpellAtMonsterUseCase = null!;
         private UseSelfSpellUseCase _useSelfSpellUseCase = null!;
         private MonsterAttackUseCase _monsterAttackUseCase = null!;
+        private MonsterAdvanceUseCase _monsterAdvanceUseCase = null!;
 
         private BoardCombatState _combatState = null!;
 
@@ -77,6 +86,7 @@ namespace Game.Presentation.Combat.Controllers
 
         private PlayerCardInventoryItemDto _selectedDamageCard = null!;
         private bool _hasSelectedDamageCard;
+        private bool _combatResolved;
 
         public bool CanUseMovementInput()
         {
@@ -89,6 +99,7 @@ namespace Game.Presentation.Combat.Controllers
         private void Awake()
         {
             _authTokenStore = new AuthTokenStore();
+            _runSessionStore = new RunSessionStore();
 
             _playerApiGateway = new PlayerApiGateway(baseUrl, _authTokenStore);
             _monsterApiGateway = new MonsterApiGateway(baseUrl);
@@ -98,6 +109,7 @@ namespace Game.Presentation.Combat.Controllers
             _castSpellAtMonsterUseCase = new CastSpellAtMonsterUseCase(_checkTargetInRangeUseCase);
             _useSelfSpellUseCase = new UseSelfSpellUseCase();
             _monsterAttackUseCase = new MonsterAttackUseCase(_checkTargetInRangeUseCase);
+            _monsterAdvanceUseCase = new MonsterAdvanceUseCase();
 
             if (cancelSelectedSpellButton != null)
             {
@@ -112,11 +124,19 @@ namespace Game.Presentation.Combat.Controllers
             {
                 worldCamera = Camera.main;
             }
+
             await InitializeCombatAsync();
+        }
+
+        private void OnDestroy()
+        {
+            StopAllCoroutines();
         }
 
         private async Task InitializeCombatAsync()
         {
+            _combatResolved = false;
+
             ClearSpawnedMonsters();
             ClearSpellSlots();
             CancelSelectedSpellSilently();
@@ -260,9 +280,12 @@ namespace Game.Presentation.Combat.Controllers
                     monsterDto.goldReward,
                     monsterDto.experienceReward);
 
+                var spawnCell = grid.WorldToCell(spawnPoint.transform.position);
+                var spawnWorldPosition = grid.GetCellCenterWorld(spawnCell);
+
                 var monsterView = Instantiate(
                     monsterPrefab,
-                    spawnPoint.transform.position,
+                    spawnWorldPosition,
                     Quaternion.identity,
                     spawnedMonstersRoot);
 
@@ -292,15 +315,17 @@ namespace Game.Presentation.Combat.Controllers
             foreach (var card in loadoutCards)
             {
                 var slot = Instantiate(spellSlotPrefab, spellSlotsRoot);
-                slot.Bind(card, OnSpellSlotClicked);
+                slot.Bind(card, OnSpellSlotClicked, _combatState.Player.DamageBonus);
                 _spawnedSpellSlots.Add(slot);
             }
         }
 
         private void ClearSpellSlots()
         {
-            foreach (var slot in _spawnedSpellSlots)
+            for (var i = _spawnedSpellSlots.Count - 1; i >= 0; i--)
             {
+                var slot = _spawnedSpellSlots[i];
+
                 if (slot != null)
                 {
                     Destroy(slot.gameObject);
@@ -339,6 +364,7 @@ namespace Game.Presentation.Combat.Controllers
                     card.effectValue);
 
                 RefreshAllUi();
+                TryResolveFinishedCombat();
                 return;
             }
 
@@ -368,7 +394,7 @@ namespace Game.Presentation.Combat.Controllers
             _selectedDamageCard = null!;
             _hasSelectedDamageCard = false;
         }
-        
+
         public bool TryConsumeMovement(int movementCost)
         {
             if (_combatState == null) return false;
@@ -404,10 +430,15 @@ namespace Game.Presentation.Combat.Controllers
             _combatState.EndPlayerTurn();
             RefreshAllUi();
 
-            var playerCell = ToCellPosition(grid.WorldToCell(playerTransform.position));
-
-            foreach (var monsterView in _spawnedMonsterViews)
+            for (var i = 0; i < _spawnedMonsterViews.Count; i++)
             {
+                var monsterView = _spawnedMonsterViews[i];
+
+                if (monsterView == null)
+                {
+                    continue;
+                }
+
                 if (_combatState.IsFinished)
                 {
                     break;
@@ -419,18 +450,71 @@ namespace Game.Presentation.Combat.Controllers
                     continue;
                 }
 
-                var monsterCell = ToCellPosition(grid.WorldToCell(monsterView.transform.position));
+                var playerCell = ToCellPosition(grid.WorldToCell(playerTransform.position));
+                var startCell = ToCellPosition(grid.WorldToCell(monsterView.transform.position));
 
-                var log = _monsterAttackUseCase.Execute(
-                    _combatState.Player,
-                    monsterState,
-                    monsterCell,
-                    playerCell);
+                if (_checkTargetInRangeUseCase.Execute(startCell, playerCell, 1))
+                {
+                    var attackLog = _monsterAttackUseCase.Execute(
+                        _combatState.Player,
+                        monsterState,
+                        startCell,
+                        playerCell);
 
-                _combatState.SetLog(log);
-                RefreshAllUi();
+                    _combatState.SetLog(attackLog);
+                    RefreshAllUi();
+
+                    if (TryResolveFinishedCombat())
+                    {
+                        yield break;
+                    }
+
+                    yield return new WaitForSeconds(enemyTurnDelaySeconds);
+                    continue;
+                }
+
+                var blockedCells = BuildBlockedCellsForMonster(monsterView, playerCell);
+                var movedCell = _monsterAdvanceUseCase.Execute(startCell, playerCell, 2, blockedCells);
+
+                if (!movedCell.Equals(startCell))
+                {
+                    MoveMonsterToCell(monsterView, movedCell);
+                    _combatState.SetLog($"{monsterState.Name} moved closer.");
+                    RefreshAllUi();
+
+                    yield return new WaitForSeconds(enemyTurnDelaySeconds);
+                }
+
+                playerCell = ToCellPosition(grid.WorldToCell(playerTransform.position));
+
+                if (_checkTargetInRangeUseCase.Execute(movedCell, playerCell, 1))
+                {
+                    var attackLog = _monsterAttackUseCase.Execute(
+                        _combatState.Player,
+                        monsterState,
+                        movedCell,
+                        playerCell);
+
+                    _combatState.SetLog(attackLog);
+                    RefreshAllUi();
+
+                    if (TryResolveFinishedCombat())
+                    {
+                        yield break;
+                    }
+                }
+                else if (movedCell.Equals(startCell))
+                {
+                    _combatState.SetLog($"{monsterState.Name} could not move closer.");
+                    RefreshAllUi();
+                }
 
                 yield return new WaitForSeconds(enemyTurnDelaySeconds);
+            }
+
+            if (TryResolveFinishedCombat())
+            {
+                yield break;
             }
 
             if (!_combatState.IsFinished)
@@ -438,6 +522,44 @@ namespace Game.Presentation.Combat.Controllers
                 _combatState.StartPlayerTurn();
                 RefreshAllUi();
             }
+        }
+
+        private HashSet<CellPosition> BuildBlockedCellsForMonster(MonsterView movingMonsterView, CellPosition playerCell)
+        {
+            var blockedCells = new HashSet<CellPosition>
+            {
+                playerCell
+            };
+
+            foreach (var otherMonsterView in _spawnedMonsterViews)
+            {
+                if (otherMonsterView == null || otherMonsterView == movingMonsterView)
+                {
+                    continue;
+                }
+
+                var otherState = otherMonsterView.RuntimeState;
+                if (otherState == null || otherState.IsDead)
+                {
+                    continue;
+                }
+
+                var otherCell = ToCellPosition(grid.WorldToCell(otherMonsterView.transform.position));
+                blockedCells.Add(otherCell);
+            }
+
+            return blockedCells;
+        }
+
+        private void MoveMonsterToCell(MonsterView monsterView, CellPosition targetCell)
+        {
+            if (monsterView == null)
+            {
+                return;
+            }
+
+            var targetWorld = grid.GetCellCenterWorld(new Vector3Int(targetCell.X, targetCell.Y, 0));
+            monsterView.transform.position = targetWorld;
         }
 
         private void Update()
@@ -509,7 +631,10 @@ namespace Game.Presentation.Combat.Controllers
                 monsterCell,
                 command);
 
-            monsterView.Refresh();
+            if (monsterView != null)
+            {
+                monsterView.Refresh();
+            }
 
             if (success)
             {
@@ -517,6 +642,7 @@ namespace Game.Presentation.Combat.Controllers
             }
 
             RefreshAllUi();
+            TryResolveFinishedCombat();
         }
 
         private CastSpellAtMonsterCommand CreateDamageCommand(PlayerCardInventoryItemDto card)
@@ -550,6 +676,59 @@ namespace Game.Presentation.Combat.Controllers
             return 1;
         }
 
+        private bool TryResolveFinishedCombat()
+        {
+            if (_combatState == null)
+            {
+                return false;
+            }
+
+            if (_combatResolved)
+            {
+                return true;
+            }
+
+            if (!_combatState.IsFinished)
+            {
+                return false;
+            }
+
+            _combatResolved = true;
+            CancelSelectedSpellSilently();
+
+            var goldEarned = Math.Max(0, _combatState.PendingRunGold);
+            var experienceEarned = Math.Max(0, _combatState.PendingRunExperience);
+
+            if (_combatState.Player.IsDead)
+            {
+                _runSessionStore.RegisterDefeat(goldEarned, experienceEarned);
+                _combatState.SetLog("Defeat. Returning to run result screen...");
+            }
+            else
+            {
+                _runSessionStore.RegisterVictory(goldEarned, experienceEarned);
+                _combatState.SetLog("Victory. Opening battle map...");
+            }
+
+            RefreshAllUi();
+            StartCoroutine(LoadInGameMapAfterDelayCoroutine());
+
+            return true;
+        }
+
+        private IEnumerator LoadInGameMapAfterDelayCoroutine()
+        {
+            yield return new WaitForSeconds(combatResultDelaySeconds);
+
+            if (string.IsNullOrWhiteSpace(inGameMapSceneName))
+            {
+                Debug.LogError("InGameMap scene name is missing on BoardCombatController.");
+                yield break;
+            }
+
+            SceneManager.LoadScene(inGameMapSceneName);
+        }
+
         private Sprite ResolveMonsterSprite(string monsterKey)
         {
             foreach (var entry in monsterSprites)
@@ -581,8 +760,10 @@ namespace Game.Presentation.Combat.Controllers
 
         private void ClearSpawnedMonsters()
         {
-            foreach (var monsterView in _spawnedMonsterViews)
+            for (var i = _spawnedMonsterViews.Count - 1; i >= 0; i--)
             {
+                var monsterView = _spawnedMonsterViews[i];
+
                 if (monsterView != null)
                 {
                     Destroy(monsterView.gameObject);
@@ -599,15 +780,26 @@ namespace Game.Presentation.Combat.Controllers
                 return;
             }
 
-            foreach (var monsterView in _spawnedMonsterViews)
+            for (var i = _spawnedMonsterViews.Count - 1; i >= 0; i--)
             {
+                var monsterView = _spawnedMonsterViews[i];
+
+                if (monsterView == null)
+                {
+                    _spawnedMonsterViews.RemoveAt(i);
+                    continue;
+                }
+
                 monsterView.Refresh();
             }
 
-            foreach (var slot in _spawnedSpellSlots)
+            for (var i = _spawnedSpellSlots.Count - 1; i >= 0; i--)
             {
+                var slot = _spawnedSpellSlots[i];
+
                 if (slot == null)
                 {
+                    _spawnedSpellSlots.RemoveAt(i);
                     continue;
                 }
 
@@ -624,6 +816,7 @@ namespace Game.Presentation.Combat.Controllers
                     $"HP {_combatState.Player.CurrentHealth}/{_combatState.Player.MaxHealth}\n" +
                     $"Mana {_combatState.Player.CurrentMana}/{_combatState.Player.MaxMana}\n" +
                     $"Block {_combatState.Player.Block}\n" +
+                        $"Damage Bonus +{_combatState.Player.DamageBonus}\n" +
                     $"Move {_combatState.Player.RemainingMovementTiles}/{_combatState.Player.MovementTilesPerTurn}";
             }
 
