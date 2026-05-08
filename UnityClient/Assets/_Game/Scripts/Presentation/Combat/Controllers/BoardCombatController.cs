@@ -99,8 +99,11 @@ namespace Game.Presentation.Combat.Controllers
             _useSelfSpellUseCase = new UseSelfSpellUseCase();
             _monsterAttackUseCase = new MonsterAttackUseCase(_checkTargetInRangeUseCase);
 
-            cancelSelectedSpellButton.onClick.RemoveAllListeners();
-            cancelSelectedSpellButton.onClick.AddListener(CancelSelectedSpell);
+            if (cancelSelectedSpellButton != null)
+            {
+                cancelSelectedSpellButton.onClick.RemoveAllListeners();
+                cancelSelectedSpellButton.onClick.AddListener(CancelSelectedSpell);
+            }
         }
 
         private async void Start()
@@ -109,33 +112,40 @@ namespace Game.Presentation.Combat.Controllers
             {
                 worldCamera = Camera.main;
             }
-
             await InitializeCombatAsync();
         }
 
         private async Task InitializeCombatAsync()
         {
+            ClearSpawnedMonsters();
+            ClearSpellSlots();
+            CancelSelectedSpellSilently();
+
             if (grid == null || playerTransform == null)
             {
                 Debug.LogError("BoardCombatController is missing Grid or Player Transform.");
+                SetLog("Combat setup error: Grid or Player Transform missing.");
                 return;
             }
 
             if (spawnedMonstersRoot == null || monsterPrefab == null)
             {
                 Debug.LogError("BoardCombatController is missing SpawnedMonstersRoot or MonsterPrefab.");
+                SetLog("Combat setup error: Monster root or prefab missing.");
                 return;
             }
 
             if (spawnPoints.Count == 0)
             {
                 Debug.LogError("BoardCombatController has no spawn points.");
+                SetLog("Combat setup error: No spawn points configured.");
                 return;
             }
 
             if (spellSlotsRoot == null || spellSlotPrefab == null)
             {
                 Debug.LogError("BoardCombatController is missing SpellSlotsRoot or SpellSlotPrefab.");
+                SetLog("Combat setup error: Spell bar not configured.");
                 return;
             }
 
@@ -147,8 +157,10 @@ namespace Game.Presentation.Combat.Controllers
 
             try
             {
+                SetLog("Fetching player...");
                 var playerDto = await _playerApiGateway.GetCurrentPlayerAsync();
-                var inventoryDto = await _playerInventoryApiClient.GetInventoryAsync();
+
+                SetLog("Fetching monsters...");
                 var monsterCatalog = await _monsterApiGateway.GetAllMonstersAsync();
 
                 var playerState = new PlayerRuntimeState(
@@ -158,29 +170,57 @@ namespace Game.Presentation.Combat.Controllers
                     playerDto.damageBonus,
                     playerDto.movementTilesPerTurn);
 
-                var loadoutCards = inventoryDto.cards
-                    .Where(x => x.location == "Loadout")
-                    .OrderBy(x => x.loadoutOrder)
-                    .ToList();
-
-                ClearSpawnedMonsters();
-                ClearSpellSlots();
-                CancelSelectedSpellSilently();
-
+                SetLog("Spawning monsters...");
                 var monsterStates = SpawnRandomMonstersFromCatalog(monsterCatalog);
 
                 _combatState = new BoardCombatState(playerState, monsterStates);
                 _combatState.StartPlayerTurn();
-                _combatState.SetLog("Combat ready.");
 
-                BuildSpellSlots(loadoutCards);
+                var loadoutCards = await TryLoadLoadoutCardsAsync();
+                if (loadoutCards.Count > 0)
+                {
+                    BuildSpellSlots(loadoutCards);
+                    _combatState.SetLog("Combat ready.");
+                }
+                else
+                {
+                    _combatState.SetLog("Combat ready. No loadout cards available.");
+                }
+
                 RefreshAllUi();
             }
             catch (Exception ex)
             {
-                SetLog(ex.Message);
                 Debug.LogError(ex);
+                SetLog(ex.Message);
             }
+        }
+
+        private async Task<List<PlayerCardInventoryItemDto>> TryLoadLoadoutCardsAsync()
+        {
+            try
+            {
+                SetLog("Fetching inventory...");
+                var inventoryDto = await _playerInventoryApiClient.GetInventoryAsync();
+
+                var loadoutCards = inventoryDto.cards
+                    .Where(x => IsLoadoutLocation(x.location))
+                    .OrderBy(x => x.loadoutOrder)
+                    .ToList();
+
+                Debug.Log($"Inventory loaded. Loadout cards found: {loadoutCards.Count}");
+                return loadoutCards;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Inventory could not be loaded for combat: {ex.Message}");
+                return new List<PlayerCardInventoryItemDto>();
+            }
+        }
+
+        private static bool IsLoadoutLocation(string location)
+        {
+            return string.Equals(location?.Trim(), "Loadout", StringComparison.OrdinalIgnoreCase);
         }
 
         private List<MonsterRuntimeState> SpawnRandomMonstersFromCatalog(List<MonsterDto> monsterCatalog)
@@ -234,11 +274,16 @@ namespace Game.Presentation.Combat.Controllers
                 {
                     monsterView.SetSprite(sprite);
                 }
+                else
+                {
+                    Debug.LogWarning($"No sprite mapping found for monster key '{monsterDto.monsterKey}'.");
+                }
 
                 _spawnedMonsterViews.Add(monsterView);
                 result.Add(runtimeState);
             }
 
+            Debug.Log($"Spawned monsters: {result.Count}");
             return result;
         }
 
@@ -272,7 +317,7 @@ namespace Game.Presentation.Combat.Controllers
                 return;
             }
 
-            if (card.effectType == "Damage")
+            if (string.Equals(card.effectType, "Damage", StringComparison.OrdinalIgnoreCase))
             {
                 _selectedDamageCard = card;
                 _hasSelectedDamageCard = true;
@@ -281,7 +326,8 @@ namespace Game.Presentation.Combat.Controllers
                 return;
             }
 
-            if (card.effectType == "Block" || card.effectType == "Heal")
+            if (string.Equals(card.effectType, "Block", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(card.effectType, "Heal", StringComparison.OrdinalIgnoreCase))
             {
                 CancelSelectedSpellSilently();
 
@@ -302,17 +348,19 @@ namespace Game.Presentation.Combat.Controllers
 
         public void CancelSelectedSpell()
         {
-            if (_hasSelectedDamageCard)
+            if (!_hasSelectedDamageCard)
             {
-                CancelSelectedSpellSilently();
-
-                if (_combatState != null)
-                {
-                    _combatState.SetLog("Selected spell cancelled.");
-                }
-
-                RefreshAllUi();
+                return;
             }
+
+            CancelSelectedSpellSilently();
+
+            if (_combatState != null)
+            {
+                _combatState.SetLog("Selected spell cancelled.");
+            }
+
+            RefreshAllUi();
         }
 
         private void CancelSelectedSpellSilently()
@@ -320,7 +368,7 @@ namespace Game.Presentation.Combat.Controllers
             _selectedDamageCard = null!;
             _hasSelectedDamageCard = false;
         }
-
+        
         public bool TryConsumeMovement(int movementCost)
         {
             if (_combatState == null) return false;
@@ -484,7 +532,7 @@ namespace Game.Presentation.Combat.Controllers
 
         private int GetDamageRange(PlayerCardInventoryItemDto card)
         {
-            if (card.effectType != "Damage")
+            if (!string.Equals(card.effectType, "Damage", StringComparison.OrdinalIgnoreCase))
             {
                 return 0;
             }
@@ -506,7 +554,9 @@ namespace Game.Presentation.Combat.Controllers
         {
             foreach (var entry in monsterSprites)
             {
-                if (entry != null && entry.monsterKey == monsterKey && entry.sprite != null)
+                if (entry != null &&
+                    string.Equals(entry.monsterKey, monsterKey, StringComparison.OrdinalIgnoreCase) &&
+                    entry.sprite != null)
                 {
                     return entry.sprite;
                 }
@@ -568,26 +618,33 @@ namespace Game.Presentation.Combat.Controllers
                 slot.SetInteractable(_combatState.IsPlayerTurn && !_combatState.IsFinished);
             }
 
-            playerStatsText.text =
-                $"HP {_combatState.Player.CurrentHealth}/{_combatState.Player.MaxHealth}\n" +
-                $"Mana {_combatState.Player.CurrentMana}/{_combatState.Player.MaxMana}\n" +
-                $"Block {_combatState.Player.Block}\n" +
-                $"Move {_combatState.Player.RemainingMovementTiles}/{_combatState.Player.MovementTilesPerTurn}";
-
-            pendingRewardsText.text =
-                $"Pending Gold: {_combatState.PendingRunGold}\n" +
-                $"Pending XP: {_combatState.PendingRunExperience}";
-
-            if (_combatState.IsFinished)
+            if (playerStatsText != null)
             {
-                turnText.text = _combatState.Player.IsDead ? "Defeat" : "Victory";
-            }
-            else
-            {
-                turnText.text = _combatState.IsPlayerTurn ? "Player Turn" : "Enemy Turn";
+                playerStatsText.text =
+                    $"HP {_combatState.Player.CurrentHealth}/{_combatState.Player.MaxHealth}\n" +
+                    $"Mana {_combatState.Player.CurrentMana}/{_combatState.Player.MaxMana}\n" +
+                    $"Block {_combatState.Player.Block}\n" +
+                    $"Move {_combatState.Player.RemainingMovementTiles}/{_combatState.Player.MovementTilesPerTurn}";
             }
 
-            battleLogText.text = _combatState.LastLog;
+            if (pendingRewardsText != null)
+            {
+                pendingRewardsText.text =
+                    $"Pending Gold: {_combatState.PendingRunGold}\n" +
+                    $"Pending XP: {_combatState.PendingRunExperience}";
+            }
+
+            if (turnText != null)
+            {
+                turnText.text = _combatState.IsFinished
+                    ? (_combatState.Player.IsDead ? "Defeat" : "Victory")
+                    : (_combatState.IsPlayerTurn ? "Player Turn" : "Enemy Turn");
+            }
+
+            if (battleLogText != null)
+            {
+                battleLogText.text = _combatState.LastLog;
+            }
         }
 
         private void SetLog(string text)
