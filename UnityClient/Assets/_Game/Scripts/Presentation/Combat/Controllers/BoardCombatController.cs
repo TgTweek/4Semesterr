@@ -13,16 +13,15 @@ using Game.Infrastructure.Api.Dtos.Inventory;
 using Game.Infrastructure.Api.Inventory;
 using Game.Infrastructure.Api.Player;
 using Game.Infrastructure.Auth;
+using Game.Infrastructure.Combat;
 using Game.Infrastructure.Run;
 using Game.Presentation.Combat.Views;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using Game.Infrastructure.Combat;
-
-using UnityEngine.EventSystems;
 
 namespace Game.Presentation.Combat.Controllers
 {
@@ -75,8 +74,8 @@ namespace Game.Presentation.Combat.Controllers
         private PlayerApiGateway _playerApiGateway = null!;
         private MonsterApiGateway _monsterApiGateway = null!;
         private PlayerInventoryApiClient _playerInventoryApiClient = null!;
-
         private MonsterRuntimeFactory _monsterRuntimeFactory = null!;
+
         private int _difficultyTier;
         private bool _isBossFight;
 
@@ -95,6 +94,7 @@ namespace Game.Presentation.Combat.Controllers
         private bool _hasSelectedDamageCard;
         private bool _combatResolved;
         private MonsterView _hoveredMonsterView = null!;
+
         public bool CanUseMovementInput()
         {
             return _combatState != null &&
@@ -102,6 +102,7 @@ namespace Game.Presentation.Combat.Controllers
                    _combatState.IsPlayerTurn &&
                    !_hasSelectedDamageCard;
         }
+
         public IReadOnlyList<CellPosition> GetOccupiedMonsterCells()
         {
             var result = new List<CellPosition>();
@@ -130,6 +131,7 @@ namespace Game.Presentation.Combat.Controllers
 
             return result;
         }
+
         public bool IsMonsterOccupyingCell(Vector3Int cell)
         {
             if (grid == null)
@@ -195,6 +197,7 @@ namespace Game.Presentation.Combat.Controllers
 
         private void OnDestroy()
         {
+            SetHoveredMonster(null);
             StopAllCoroutines();
         }
 
@@ -250,6 +253,7 @@ namespace Game.Presentation.Combat.Controllers
 
                 SetLog("Fetching monsters...");
                 var monsterCatalog = await _monsterApiGateway.GetAllMonstersAsync();
+
                 var playerState = new PlayerRuntimeState(
                     playerDto.level,
                     playerDto.baseMaxHealth,
@@ -262,6 +266,7 @@ namespace Game.Presentation.Combat.Controllers
                 var monsterStates = _isBossFight
                     ? SpawnBossMonsterFromCatalog(monsterCatalog)
                     : SpawnRandomMonstersFromCatalog(monsterCatalog);
+
                 _combatState = new BoardCombatState(playerState, monsterStates);
                 _combatState.StartPlayerTurn();
 
@@ -359,6 +364,7 @@ namespace Game.Presentation.Combat.Controllers
             Debug.Log($"Spawned monsters: {result.Count}");
             return result;
         }
+
         private List<MonsterRuntimeState> SpawnBossMonsterFromCatalog(List<MonsterDto> monsterCatalog)
         {
             if (monsterCatalog == null || monsterCatalog.Count == 0)
@@ -394,9 +400,10 @@ namespace Game.Presentation.Combat.Controllers
 
             return new List<MonsterRuntimeState>
             {
-               runtimeState
+                runtimeState
             };
         }
+
         private void SpawnMonsterView(
             MonsterDto monsterDto,
             MonsterRuntimeState runtimeState,
@@ -757,6 +764,7 @@ namespace Game.Presentation.Combat.Controllers
                 Range = GetDamageRange(card)
             };
         }
+
         private void UpdateHoveredMonster()
         {
             if (_combatState == null || _combatState.IsFinished)
@@ -997,6 +1005,11 @@ namespace Game.Presentation.Combat.Controllers
                 monsterView.Refresh();
             }
 
+            if (_hoveredMonsterView != null)
+            {
+                _hoveredMonsterView.SetHovered(true);
+            }
+
             for (var i = _spawnedSpellSlots.Count - 1; i >= 0; i--)
             {
                 var slot = _spawnedSpellSlots[i];
@@ -1017,8 +1030,8 @@ namespace Game.Presentation.Combat.Controllers
             if (playerStatsText != null)
             {
                 var damageBonusLine = _combatState.Player.DamageBonus > 0
-     ? $"Dmg +{_combatState.Player.DamageBonus}\n"
-     : string.Empty;
+                    ? $"Dmg +{_combatState.Player.DamageBonus}\n"
+                    : string.Empty;
 
                 playerStatsText.text =
                     $"HP {_combatState.Player.CurrentHealth}/{_combatState.Player.MaxHealth}\n" +
