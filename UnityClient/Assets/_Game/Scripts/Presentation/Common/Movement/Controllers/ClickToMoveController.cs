@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Game.Application.Movement.Commands;
 using Game.Application.Movement.UseCases;
-using Game.Domain.ValueObjects;
 using Game.Presentation.Common.Movement.Views;
 using Game.Presentation.Combat.Controllers;
 using UnityEngine;
@@ -73,7 +72,7 @@ namespace Game.Presentation.Common.Movement.Controllers
                 return;
             }
 
-            if (_cachedHoverPath.Count <= 1)
+            if (_cachedHoverPath.Count == 0)
             {
                 return;
             }
@@ -101,17 +100,12 @@ namespace Game.Presentation.Common.Movement.Controllers
             _lastHoverStartCell = startCell;
             _lastHoverTargetCell = targetCell;
 
-            var blockedCells = boardCombatController != null
-                ? boardCombatController.GetOccupiedMonsterCells()
-                : new List<CellPosition>();
-
             var result = _findPathToCellUseCase.Execute(
                 new FindPathCommand(
                     startCell.x,
                     startCell.y,
                     targetCell.x,
-                    targetCell.y,
-                    blockedCells));
+                    targetCell.y));
 
             if (!result.IsSuccess)
             {
