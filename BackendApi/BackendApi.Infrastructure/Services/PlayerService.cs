@@ -37,7 +37,10 @@ namespace BackendApi.Infrastructure.Services
                 DamageBonus = PlayerProgressionRules.GetDamageBonus(player.Level),
                 BaseMaxHealth = PlayerProgressionRules.GetBaseMaxHealth(player.Level),
                 BaseMaxMana = PlayerProgressionRules.GetBaseMaxMana(player.Level),
-                MovementTilesPerTurn = PlayerProgressionRules.GetMovementTilesPerTurn(player.Level)
+                MovementTilesPerTurn = PlayerProgressionRules.GetMovementTilesPerTurn(player.Level),
+                DifficultyTier = player.DifficultyTier,
+                HighestDifficultyTierReached = player.HighestDifficultyTierReached,
+                BossesDefeated = player.BossesDefeated
             };
         }
     }

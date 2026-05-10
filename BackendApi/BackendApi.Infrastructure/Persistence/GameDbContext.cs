@@ -60,6 +60,19 @@ namespace BackendApi.Infrastructure.Persistence
                     .IsRequired()
                     .HasDefaultValue(3);
 
+                entity.Property(x => x.DifficultyTier)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                entity.Property(x => x.HighestDifficultyTierReached)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                entity.Property(x => x.BossesDefeated)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+
                 entity.Property(x => x.RowVersion)
                     .IsRowVersion();
 
@@ -114,6 +127,10 @@ namespace BackendApi.Infrastructure.Persistence
 
                 entity.Property(x => x.ExperienceReward)
                     .IsRequired();
+
+                entity.Property(x => x.IsBoss)
+                    .IsRequired()
+                    .HasDefaultValue(false);
             });
 
             modelBuilder.Entity<CardDefinition>(entity =>

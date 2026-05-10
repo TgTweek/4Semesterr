@@ -11,5 +11,6 @@
 
         public int GoldReward { get; set; }
         public int ExperienceReward { get; set; }
+        public bool IsBoss { get; set; }
     }
 }

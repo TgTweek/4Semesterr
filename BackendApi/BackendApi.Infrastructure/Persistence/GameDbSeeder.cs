@@ -172,6 +172,7 @@ namespace BackendApi.Infrastructure.Persistence
                 entity.Mana = item.Mana;
                 entity.GoldReward = item.GoldReward;
                 entity.ExperienceReward = item.ExperienceReward;
+                entity.IsBoss = item.IsBoss;
             }
         }
 
@@ -260,6 +261,7 @@ namespace BackendApi.Infrastructure.Persistence
             public int Mana { get; set; }
             public int GoldReward { get; set; }
             public int ExperienceReward { get; set; }
+            public bool IsBoss { get; set; }
         }
     }
 }

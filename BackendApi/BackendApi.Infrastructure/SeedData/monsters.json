@@ -3,10 +3,11 @@
     "monsterKey": "green_slime",
     "name": "Green Slime",
     "maxHealth": 18,
-    "damage": 4,
+    "damage": 6,
     "mana": 0,
     "goldReward": 8,
-    "experienceReward": 15
+    "experienceReward": 10,
+    "isBoss": false
   },
   {
     "monsterKey": "cave_spider",
@@ -15,7 +16,8 @@
     "damage": 5,
     "mana": 0,
     "goldReward": 10,
-    "experienceReward": 18
+    "experienceReward": 14,
+    "isBoss": false
   },
   {
     "monsterKey": "skeleton_guard",
@@ -24,6 +26,77 @@
     "damage": 6,
     "mana": 0,
     "goldReward": 14,
-    "experienceReward": 24
+    "experienceReward": 17,
+    "isBoss": false
+  },
+  {
+    "monsterKey": "mud_goblin",
+    "name": "Mud Goblin",
+    "maxHealth": 24,
+    "damage": 7,
+    "mana": 0,
+    "goldReward": 10,
+    "experienceReward": 12,
+    "isBoss": false
+  },
+  {
+    "monsterKey": "forest_bat",
+    "name": "Forest Bat",
+    "maxHealth": 18,
+    "damage": 8,
+    "mana": 0,
+    "goldReward": 9,
+    "experienceReward": 13,
+    "isBoss": false
+  },
+  {
+    "monsterKey": "armored_bug",
+    "name": "Armored Bug",
+    "maxHealth": 30,
+    "damage": 6,
+    "mana": 0,
+    "goldReward": 13,
+    "experienceReward": 14,
+    "isBoss": false
+  },
+  {
+    "monsterKey": "stone_turtle",
+    "name": "Stone Turtle",
+    "maxHealth": 35,
+    "damage": 7,
+    "mana": 0,
+    "goldReward": 17,
+    "experienceReward": 18,
+    "isBoss": false
+  },
+  {
+    "monsterKey": "plague_witch",
+    "name": "Plague Witch",
+    "maxHealth": 120,
+    "damage": 25,
+    "mana": 0,
+    "goldReward": 34,
+    "experienceReward": 35,
+    "isBoss": true
+  },
+  {
+    "monsterKey": "iron_golem",
+    "name": "Iron Golem",
+    "maxHealth": 150,
+    "damage": 20,
+    "mana": 0,
+    "goldReward": 35,
+    "experienceReward": 36,
+    "isBoss": true
+  },
+  {
+    "monsterKey": "flame_hound",
+    "name": "Flame Hound",
+    "maxHealth": 110,
+    "damage": 30,
+    "mana": 0,
+    "goldReward": 37,
+    "experienceReward": 65,
+    "isBoss": true
   }
 ]

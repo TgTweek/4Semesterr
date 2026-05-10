@@ -23,5 +23,9 @@
         public bool ShopRefreshed { get; set; }
 
         public string Message { get; set; } = string.Empty;
+        public int DifficultyTier { get; set; }
+        public int HighestDifficultyTierReached { get; set; }
+        public int BossesDefeated { get; set; }
+        public bool DifficultyIncreased { get; set; }
     }
 }

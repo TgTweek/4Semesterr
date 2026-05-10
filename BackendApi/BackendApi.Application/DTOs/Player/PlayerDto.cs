@@ -18,5 +18,8 @@ namespace BackendApi.Application.DTOs.Player
         public int BaseMaxHealth { get; set; }
         public int BaseMaxMana { get; set; }
         public int MovementTilesPerTurn { get; set; }
+        public int DifficultyTier { get; set; }
+        public int HighestDifficultyTierReached { get; set; }
+        public int BossesDefeated { get; set; }
     }
 }

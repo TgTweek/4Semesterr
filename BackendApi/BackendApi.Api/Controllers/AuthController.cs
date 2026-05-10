@@ -65,7 +65,10 @@ namespace BackendApi.Api.Controllers
                 Experience = 0,
                 DamageBonus = 0,
                 BaseMaxHealth = 30,
-                BaseMaxMana = 3
+                BaseMaxMana = 3,
+                DifficultyTier = 0,
+                HighestDifficultyTierReached = 0,
+                BossesDefeated = 0
             };
 
             _dbContext.Players.Add(player);

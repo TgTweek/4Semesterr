@@ -25,7 +25,8 @@ namespace BackendApi.Infrastructure.Services
                     Damage = x.Damage,
                     Mana = x.Mana,
                     GoldReward = x.GoldReward,
-                    ExperienceReward = x.ExperienceReward
+                    ExperienceReward = x.ExperienceReward,
+                    IsBoss = x.IsBoss
                 })
                 .ToListAsync();
         }
@@ -42,7 +43,8 @@ namespace BackendApi.Infrastructure.Services
                     Damage = x.Damage,
                     Mana = x.Mana,
                     GoldReward = x.GoldReward,
-                    ExperienceReward = x.ExperienceReward
+                    ExperienceReward = x.ExperienceReward,
+                    IsBoss = x.IsBoss
                 })
                 .FirstOrDefaultAsync();
         }

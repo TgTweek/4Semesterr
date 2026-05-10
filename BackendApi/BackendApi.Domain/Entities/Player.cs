@@ -15,7 +15,9 @@ namespace BackendApi.Domain.Entities
         public int DamageBonus { get; set; } = 0;
         public int BaseMaxHealth { get; set; } = 30;
         public int BaseMaxMana { get; set; } = 3;
-
+        public int DifficultyTier { get; set; } = 0;
+        public int HighestDifficultyTierReached { get; set; } = 0;
+        public int BossesDefeated { get; set; } = 0;
         public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         public ICollection<PlayerCard> OwnedCards { get; set; } = new List<PlayerCard>();

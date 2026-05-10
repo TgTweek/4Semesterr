@@ -11,7 +11,7 @@ namespace BackendApi.Infrastructure.Services
     {
         private const string OutcomeDefeat = "Defeat";
         private const string OutcomeReturnedHome = "ReturnedHome";
-
+        private const string OutcomeBossVictory = "BossVictory";
         private const string StarterStrikeKey = "starter_strike";
         private const string StarterBlockKey = "starter_block";
 
@@ -32,7 +32,7 @@ namespace BackendApi.Infrastructure.Services
 
             var outcome = NormalizeOutcome(request.Outcome);
             var isDefeat = outcome == OutcomeDefeat;
-
+            var isBossVictory = outcome == OutcomeBossVictory;
             await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
             var player = await _dbContext.Players
@@ -51,6 +51,16 @@ namespace BackendApi.Infrastructure.Services
             {
                 lostCardsCount = await RemoveNonStarterLoadoutCardsAsync(player.PlayerId);
                 await NormalizeStarterLoadoutOrderAsync(player.PlayerId);
+            }
+            if (isBossVictory)
+            {
+                player.BossesDefeated++;
+                player.DifficultyTier++;
+
+                if (player.DifficultyTier > player.HighestDifficultyTierReached)
+                {
+                    player.HighestDifficultyTierReached = player.DifficultyTier;
+                }
             }
 
             await _dbContext.SaveChangesAsync();
@@ -77,13 +87,18 @@ namespace BackendApi.Infrastructure.Services
                 BaseMaxHealth = PlayerProgressionRules.GetBaseMaxHealth(player.Level),
                 BaseMaxMana = PlayerProgressionRules.GetBaseMaxMana(player.Level),
                 MovementTilesPerTurn = PlayerProgressionRules.GetMovementTilesPerTurn(player.Level),
-
+                DifficultyTier = player.DifficultyTier,
+                HighestDifficultyTierReached = player.HighestDifficultyTierReached,
+                BossesDefeated = player.BossesDefeated,
+                DifficultyIncreased = isBossVictory,
                 LostCardsCount = lostCardsCount,
                 ShopRefreshed = true,
 
                 Message = isDefeat
-                    ? $"Defeat completed. Lost {lostCardsCount} non-starter loadout cards."
-                    : "Run completed. Returned home safely."
+                  ? $"Defeat completed. Lost {lostCardsCount} non-starter loadout cards."
+                  : isBossVictory
+                     ? $"Boss defeated. Difficulty increased to tier {player.DifficultyTier}."
+                              : "Run completed. Returned home safely."
             };
         }
 
@@ -154,6 +169,11 @@ namespace BackendApi.Infrastructure.Services
 
         private static string NormalizeOutcome(string outcome)
         {
+            if (string.IsNullOrWhiteSpace(outcome))
+            {
+                throw new InvalidOperationException("Outcome is required.");
+            }
+
             var normalized = outcome.Trim();
 
             if (string.Equals(normalized, OutcomeDefeat, StringComparison.OrdinalIgnoreCase))
@@ -161,12 +181,17 @@ namespace BackendApi.Infrastructure.Services
                 return OutcomeDefeat;
             }
 
+            if (string.Equals(normalized, OutcomeBossVictory, StringComparison.OrdinalIgnoreCase))
+            {
+                return OutcomeBossVictory;
+            }
+
             if (string.Equals(normalized, OutcomeReturnedHome, StringComparison.OrdinalIgnoreCase))
             {
                 return OutcomeReturnedHome;
             }
 
-            throw new InvalidOperationException("Outcome must be either 'Defeat' or 'ReturnedHome'.");
+            throw new InvalidOperationException("Outcome must be 'Defeat', 'ReturnedHome', or 'BossVictory'.");
         }
 
         private static void ApplyRewards(Player player, int goldEarned, int experienceEarned)
