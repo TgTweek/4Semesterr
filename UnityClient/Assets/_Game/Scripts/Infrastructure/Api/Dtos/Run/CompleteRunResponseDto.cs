@@ -22,6 +22,11 @@ namespace Game.Infrastructure.Api.Dtos.Run
         public int baseMaxMana;
         public int movementTilesPerTurn;
 
+        public int difficultyTier;
+        public int highestDifficultyTierReached;
+        public int bossesDefeated;
+        public bool difficultyIncreased;
+
         public int lostCardsCount;
         public bool shopRefreshed;
 

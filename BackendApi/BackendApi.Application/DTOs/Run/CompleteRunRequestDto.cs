@@ -10,6 +10,7 @@ namespace BackendApi.Application.DTOs.Run
         // Allowed values:
         // "Defeat"
         // "ReturnedHome"
+        // "BossVictory"
         public string Outcome { get; set; } = string.Empty;
 
         public Guid MerchantId { get; set; }

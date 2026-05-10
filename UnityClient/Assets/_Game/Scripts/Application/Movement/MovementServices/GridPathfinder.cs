@@ -11,7 +11,8 @@ namespace Game.Application.Movement.Services
         public IReadOnlyList<CellPosition> FindPath(
             CellPosition start,
             CellPosition target,
-            INavigationGrid navigationGrid)
+            INavigationGrid navigationGrid,
+            IReadOnlyCollection<CellPosition>? blockedCells = null)
         {
             if (start.Equals(target))
             {
@@ -19,6 +20,15 @@ namespace Game.Application.Movement.Services
             }
 
             if (!navigationGrid.IsWalkable(start) || !navigationGrid.IsWalkable(target))
+            {
+                return Array.Empty<CellPosition>();
+            }
+
+            var blockedSet = blockedCells != null
+                ? new HashSet<CellPosition>(blockedCells)
+                : new HashSet<CellPosition>();
+
+            if (blockedSet.Contains(target))
             {
                 return Array.Empty<CellPosition>();
             }
@@ -50,6 +60,11 @@ namespace Game.Application.Movement.Services
                 foreach (var neighbor in GetOrderedNeighbors(current, target))
                 {
                     if (!navigationGrid.IsWalkable(neighbor))
+                    {
+                        continue;
+                    }
+
+                    if (blockedSet.Contains(neighbor))
                     {
                         continue;
                     }

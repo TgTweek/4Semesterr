@@ -20,6 +20,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Game.Infrastructure.Combat;
+
+using UnityEngine.EventSystems;
 
 namespace Game.Presentation.Combat.Controllers
 {
@@ -73,6 +76,10 @@ namespace Game.Presentation.Combat.Controllers
         private MonsterApiGateway _monsterApiGateway = null!;
         private PlayerInventoryApiClient _playerInventoryApiClient = null!;
 
+        private MonsterRuntimeFactory _monsterRuntimeFactory = null!;
+        private int _difficultyTier;
+        private bool _isBossFight;
+
         private CheckTargetInRangeUseCase _checkTargetInRangeUseCase = null!;
         private CastSpellAtMonsterUseCase _castSpellAtMonsterUseCase = null!;
         private UseSelfSpellUseCase _useSelfSpellUseCase = null!;
@@ -87,13 +94,70 @@ namespace Game.Presentation.Combat.Controllers
         private PlayerCardInventoryItemDto _selectedDamageCard = null!;
         private bool _hasSelectedDamageCard;
         private bool _combatResolved;
-
+        private MonsterView _hoveredMonsterView = null!;
         public bool CanUseMovementInput()
         {
             return _combatState != null &&
                    !_combatState.IsFinished &&
                    _combatState.IsPlayerTurn &&
                    !_hasSelectedDamageCard;
+        }
+        public IReadOnlyList<CellPosition> GetOccupiedMonsterCells()
+        {
+            var result = new List<CellPosition>();
+
+            if (grid == null)
+            {
+                return result;
+            }
+
+            foreach (var monsterView in _spawnedMonsterViews)
+            {
+                if (monsterView == null)
+                {
+                    continue;
+                }
+
+                var monsterState = monsterView.RuntimeState;
+                if (monsterState == null || monsterState.IsDead)
+                {
+                    continue;
+                }
+
+                var monsterCell = grid.WorldToCell(monsterView.transform.position);
+                result.Add(ToCellPosition(monsterCell));
+            }
+
+            return result;
+        }
+        public bool IsMonsterOccupyingCell(Vector3Int cell)
+        {
+            if (grid == null)
+            {
+                return false;
+            }
+
+            foreach (var monsterView in _spawnedMonsterViews)
+            {
+                if (monsterView == null)
+                {
+                    continue;
+                }
+
+                var monsterState = monsterView.RuntimeState;
+                if (monsterState == null || monsterState.IsDead)
+                {
+                    continue;
+                }
+
+                var monsterCell = grid.WorldToCell(monsterView.transform.position);
+                if (monsterCell == cell)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void Awake()
@@ -104,6 +168,7 @@ namespace Game.Presentation.Combat.Controllers
             _playerApiGateway = new PlayerApiGateway(baseUrl, _authTokenStore);
             _monsterApiGateway = new MonsterApiGateway(baseUrl);
             _playerInventoryApiClient = new PlayerInventoryApiClient(baseUrl, _authTokenStore);
+            _monsterRuntimeFactory = new MonsterRuntimeFactory();
 
             _checkTargetInRangeUseCase = new CheckTargetInRangeUseCase();
             _castSpellAtMonsterUseCase = new CastSpellAtMonsterUseCase(_checkTargetInRangeUseCase);
@@ -180,9 +245,11 @@ namespace Game.Presentation.Combat.Controllers
                 SetLog("Fetching player...");
                 var playerDto = await _playerApiGateway.GetCurrentPlayerAsync();
 
+                _difficultyTier = Math.Max(0, playerDto.difficultyTier);
+                _isBossFight = _runSessionStore.IsCurrentFightBoss();
+
                 SetLog("Fetching monsters...");
                 var monsterCatalog = await _monsterApiGateway.GetAllMonstersAsync();
-
                 var playerState = new PlayerRuntimeState(
                     playerDto.level,
                     playerDto.baseMaxHealth,
@@ -190,9 +257,11 @@ namespace Game.Presentation.Combat.Controllers
                     playerDto.damageBonus,
                     playerDto.movementTilesPerTurn);
 
-                SetLog("Spawning monsters...");
-                var monsterStates = SpawnRandomMonstersFromCatalog(monsterCatalog);
+                SetLog(_isBossFight ? "Spawning boss..." : "Spawning monsters...");
 
+                var monsterStates = _isBossFight
+                    ? SpawnBossMonsterFromCatalog(monsterCatalog)
+                    : SpawnRandomMonstersFromCatalog(monsterCatalog);
                 _combatState = new BoardCombatState(playerState, monsterStates);
                 _combatState.StartPlayerTurn();
 
@@ -250,6 +319,15 @@ namespace Game.Presentation.Combat.Controllers
                 throw new InvalidOperationException("No monsters were returned from backend.");
             }
 
+            var normalMonsterCatalog = monsterCatalog
+                .Where(x => !x.isBoss)
+                .ToList();
+
+            if (normalMonsterCatalog.Count == 0)
+            {
+                throw new InvalidOperationException("No normal monsters were returned from backend.");
+            }
+
             var availableSpawnPoints = new List<MonsterSpawnPoint>(spawnPoints);
             availableSpawnPoints.RemoveAll(x => x == null);
 
@@ -269,45 +347,85 @@ namespace Game.Presentation.Combat.Controllers
             for (var i = 0; i < finalCount; i++)
             {
                 var spawnPoint = PickAndRemoveRandom(availableSpawnPoints);
-                var monsterDto = PickRandom(monsterCatalog);
+                var monsterDto = PickRandom(normalMonsterCatalog);
 
-                var runtimeState = new MonsterRuntimeState(
-                    monsterDto.monsterKey,
-                    monsterDto.name,
-                    monsterDto.maxHealth,
-                    monsterDto.damage,
-                    monsterDto.mana,
-                    monsterDto.goldReward,
-                    monsterDto.experienceReward);
+                var runtimeState = _monsterRuntimeFactory.Create(monsterDto, _difficultyTier);
 
-                var spawnCell = grid.WorldToCell(spawnPoint.transform.position);
-                var spawnWorldPosition = grid.GetCellCenterWorld(spawnCell);
+                SpawnMonsterView(monsterDto, runtimeState, spawnPoint, i + 1);
 
-                var monsterView = Instantiate(
-                    monsterPrefab,
-                    spawnWorldPosition,
-                    Quaternion.identity,
-                    spawnedMonstersRoot);
-
-                monsterView.name = $"{monsterDto.name}_{i + 1}";
-                monsterView.BindState(runtimeState);
-
-                var sprite = ResolveMonsterSprite(monsterDto.monsterKey);
-                if (sprite != null)
-                {
-                    monsterView.SetSprite(sprite);
-                }
-                else
-                {
-                    Debug.LogWarning($"No sprite mapping found for monster key '{monsterDto.monsterKey}'.");
-                }
-
-                _spawnedMonsterViews.Add(monsterView);
                 result.Add(runtimeState);
             }
 
             Debug.Log($"Spawned monsters: {result.Count}");
             return result;
+        }
+        private List<MonsterRuntimeState> SpawnBossMonsterFromCatalog(List<MonsterDto> monsterCatalog)
+        {
+            if (monsterCatalog == null || monsterCatalog.Count == 0)
+            {
+                throw new InvalidOperationException("No monsters were returned from backend.");
+            }
+
+            var bossCatalog = monsterCatalog
+                .Where(x => x.isBoss)
+                .ToList();
+
+            if (bossCatalog.Count == 0)
+            {
+                throw new InvalidOperationException("No boss monsters were returned from backend.");
+            }
+
+            var availableSpawnPoints = new List<MonsterSpawnPoint>(spawnPoints);
+            availableSpawnPoints.RemoveAll(x => x == null);
+
+            if (availableSpawnPoints.Count == 0)
+            {
+                throw new InvalidOperationException("No valid spawn points found.");
+            }
+
+            var bossDto = PickRandom(bossCatalog);
+            var spawnPoint = PickAndRemoveRandom(availableSpawnPoints);
+
+            var runtimeState = _monsterRuntimeFactory.Create(bossDto, _difficultyTier);
+
+            SpawnMonsterView(bossDto, runtimeState, spawnPoint, 1);
+
+            Debug.Log($"Spawned boss: {bossDto.name}");
+
+            return new List<MonsterRuntimeState>
+            {
+               runtimeState
+            };
+        }
+        private void SpawnMonsterView(
+            MonsterDto monsterDto,
+            MonsterRuntimeState runtimeState,
+            MonsterSpawnPoint spawnPoint,
+            int displayIndex)
+        {
+            var spawnCell = grid.WorldToCell(spawnPoint.transform.position);
+            var spawnWorldPosition = grid.GetCellCenterWorld(spawnCell);
+
+            var monsterView = Instantiate(
+                monsterPrefab,
+                spawnWorldPosition,
+                Quaternion.identity,
+                spawnedMonstersRoot);
+
+            monsterView.name = $"{monsterDto.name}_{displayIndex}";
+            monsterView.BindState(runtimeState);
+
+            var sprite = ResolveMonsterSprite(monsterDto.monsterKey);
+            if (sprite != null)
+            {
+                monsterView.SetSprite(sprite);
+            }
+            else
+            {
+                Debug.LogWarning($"No sprite mapping found for monster key '{monsterDto.monsterKey}'.");
+            }
+
+            _spawnedMonsterViews.Add(monsterView);
         }
 
         private void BuildSpellSlots(List<PlayerCardInventoryItemDto> loadoutCards)
@@ -564,6 +682,8 @@ namespace Game.Presentation.Combat.Controllers
 
         private void Update()
         {
+            UpdateHoveredMonster();
+
             if (_combatState == null) return;
             if (_combatState.IsFinished) return;
             if (!_combatState.IsPlayerTurn) return;
@@ -589,27 +709,12 @@ namespace Game.Presentation.Combat.Controllers
                 return;
             }
 
-            var screenPosition = Mouse.current.position.ReadValue();
-            var worldPoint = worldCamera.ScreenToWorldPoint(
-                new Vector3(
-                    screenPosition.x,
-                    screenPosition.y,
-                    Mathf.Abs(worldCamera.transform.position.z)));
-
-            var hit = Physics2D.Raycast(worldPoint, Vector2.zero);
-
-            if (!hit.collider)
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 return;
             }
 
-            var monsterView = hit.collider.GetComponent<MonsterView>();
-            if (monsterView == null)
-            {
-                monsterView = hit.collider.GetComponentInParent<MonsterView>();
-            }
-
-            if (monsterView == null)
+            if (!TryGetMonsterViewUnderMouse(out var monsterView))
             {
                 return;
             }
@@ -631,10 +736,7 @@ namespace Game.Presentation.Combat.Controllers
                 monsterCell,
                 command);
 
-            if (monsterView != null)
-            {
-                monsterView.Refresh();
-            }
+            monsterView.Refresh();
 
             if (success)
             {
@@ -654,6 +756,98 @@ namespace Game.Presentation.Combat.Controllers
                 EffectValue = card.effectValue,
                 Range = GetDamageRange(card)
             };
+        }
+        private void UpdateHoveredMonster()
+        {
+            if (_combatState == null || _combatState.IsFinished)
+            {
+                SetHoveredMonster(null);
+                return;
+            }
+
+            if (worldCamera == null || Mouse.current == null)
+            {
+                SetHoveredMonster(null);
+                return;
+            }
+
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                SetHoveredMonster(null);
+                return;
+            }
+
+            if (!TryGetMonsterViewUnderMouse(out var monsterView))
+            {
+                SetHoveredMonster(null);
+                return;
+            }
+
+            SetHoveredMonster(monsterView);
+        }
+
+        private bool TryGetMonsterViewUnderMouse(out MonsterView monsterView)
+        {
+            monsterView = null!;
+
+            if (worldCamera == null || Mouse.current == null)
+            {
+                return false;
+            }
+
+            var screenPosition = Mouse.current.position.ReadValue();
+            var worldPoint = worldCamera.ScreenToWorldPoint(
+                new Vector3(
+                    screenPosition.x,
+                    screenPosition.y,
+                    Mathf.Abs(worldCamera.transform.position.z)));
+
+            var hit = Physics2D.Raycast(worldPoint, Vector2.zero);
+
+            if (!hit.collider)
+            {
+                return false;
+            }
+
+            monsterView = hit.collider.GetComponent<MonsterView>();
+            if (monsterView == null)
+            {
+                monsterView = hit.collider.GetComponentInParent<MonsterView>();
+            }
+
+            if (monsterView == null)
+            {
+                return false;
+            }
+
+            var monsterState = monsterView.RuntimeState;
+            if (monsterState == null || monsterState.IsDead)
+            {
+                monsterView = null!;
+                return false;
+            }
+
+            return true;
+        }
+
+        private void SetHoveredMonster(MonsterView monsterView)
+        {
+            if (_hoveredMonsterView == monsterView)
+            {
+                return;
+            }
+
+            if (_hoveredMonsterView != null)
+            {
+                _hoveredMonsterView.SetHovered(false);
+            }
+
+            _hoveredMonsterView = monsterView;
+
+            if (_hoveredMonsterView != null)
+            {
+                _hoveredMonsterView.SetHovered(true);
+            }
         }
 
         private int GetDamageRange(PlayerCardInventoryItemDto card)
@@ -695,6 +889,7 @@ namespace Game.Presentation.Combat.Controllers
 
             _combatResolved = true;
             CancelSelectedSpellSilently();
+            SetHoveredMonster(null);
 
             var goldEarned = Math.Max(0, _combatState.PendingRunGold);
             var experienceEarned = Math.Max(0, _combatState.PendingRunExperience);
@@ -760,6 +955,8 @@ namespace Game.Presentation.Combat.Controllers
 
         private void ClearSpawnedMonsters()
         {
+            SetHoveredMonster(null);
+
             for (var i = _spawnedMonsterViews.Count - 1; i >= 0; i--)
             {
                 var monsterView = _spawnedMonsterViews[i];
@@ -778,6 +975,13 @@ namespace Game.Presentation.Combat.Controllers
             if (_combatState == null)
             {
                 return;
+            }
+
+            if (_hoveredMonsterView == null ||
+                _hoveredMonsterView.RuntimeState == null ||
+                _hoveredMonsterView.RuntimeState.IsDead)
+            {
+                SetHoveredMonster(null);
             }
 
             for (var i = _spawnedMonsterViews.Count - 1; i >= 0; i--)
@@ -812,11 +1016,15 @@ namespace Game.Presentation.Combat.Controllers
 
             if (playerStatsText != null)
             {
+                var damageBonusLine = _combatState.Player.DamageBonus > 0
+     ? $"Dmg +{_combatState.Player.DamageBonus}\n"
+     : string.Empty;
+
                 playerStatsText.text =
                     $"HP {_combatState.Player.CurrentHealth}/{_combatState.Player.MaxHealth}\n" +
                     $"Mana {_combatState.Player.CurrentMana}/{_combatState.Player.MaxMana}\n" +
                     $"Block {_combatState.Player.Block}\n" +
-                        $"Damage Bonus +{_combatState.Player.DamageBonus}\n" +
+                    damageBonusLine +
                     $"Move {_combatState.Player.RemainingMovementTiles}/{_combatState.Player.MovementTilesPerTurn}";
             }
 

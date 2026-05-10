@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Game.Infrastructure.Api.Dtos.Run;
+using Game.Infrastructure.Api.Player;
 using Game.Infrastructure.Api.Run;
 using Game.Infrastructure.Auth;
 using Game.Infrastructure.Run;
@@ -26,6 +27,7 @@ namespace Game.Presentation.InGameMap.Controllers
 
         [Header("Panels")]
         [SerializeField] private GameObject victoryPanel = null!;
+        [SerializeField] private GameObject bossMapPanel = null!;
         [SerializeField] private GameObject defeatPanel = null!;
 
         [Header("Victory Map Buttons")]
@@ -35,8 +37,16 @@ namespace Game.Presentation.InGameMap.Controllers
         [SerializeField] private Button returnHomeButton = null!;
         [SerializeField] private Button continueRouteButton = null!;
 
+        [Header("Boss Map Buttons")]
+        [SerializeField] private Button bossFightButton = null!;
+        [SerializeField] private Button bossReturnHomeButton = null!;
+
         [Header("Victory UI")]
         [SerializeField] private TMP_Text victorySummaryText = null!;
+
+        [Header("Boss UI")]
+        [SerializeField] private TMP_Text bossSummaryText = null!;
+        [SerializeField] private TMP_Text difficultyText = null!;
 
         [Header("Defeat UI")]
         [SerializeField] private TMP_Text defeatSummaryText = null!;
@@ -48,6 +58,11 @@ namespace Game.Presentation.InGameMap.Controllers
         private AuthTokenStore _authTokenStore = null!;
         private RunSessionStore _runSessionStore = null!;
         private RunApiClient _runApiClient = null!;
+        private PlayerApiGateway _playerApiGateway = null!;
+
+        private int _difficultyTier;
+        private int _highestDifficultyTierReached;
+        private int _bossesDefeated;
 
         private bool _isBusy;
 
@@ -55,7 +70,9 @@ namespace Game.Presentation.InGameMap.Controllers
         {
             _authTokenStore = new AuthTokenStore();
             _runSessionStore = new RunSessionStore();
+
             _runApiClient = new RunApiClient(apiBaseUrl, _authTokenStore);
+            _playerApiGateway = new PlayerApiGateway(apiBaseUrl, _authTokenStore);
 
             RegisterButton(combat1Button, () => OnCombatNodeClicked(1));
             RegisterButton(combat2Button, () => OnCombatNodeClicked(2));
@@ -63,10 +80,14 @@ namespace Game.Presentation.InGameMap.Controllers
 
             RegisterButton(returnHomeButton, OnReturnHomeClicked);
             RegisterButton(continueRouteButton, OnContinueRouteClicked);
+
+            RegisterButton(bossFightButton, OnBossFightClicked);
+            RegisterButton(bossReturnHomeButton, OnReturnHomeClicked);
+
             RegisterButton(defeatReturnHomeButton, OnDefeatReturnHomeClicked);
         }
 
-        private void Start()
+        private async void Start()
         {
             if (!_authTokenStore.HasAccessToken())
             {
@@ -74,12 +95,39 @@ namespace Game.Presentation.InGameMap.Controllers
                 return;
             }
 
+            await LoadPlayerProgressAsync();
             Render();
+        }
+
+        private async Task LoadPlayerProgressAsync()
+        {
+            try
+            {
+                var player = await _playerApiGateway.GetCurrentPlayerAsync();
+
+                _difficultyTier = Math.Max(0, player.difficultyTier);
+                _highestDifficultyTierReached = Math.Max(0, player.highestDifficultyTierReached);
+                _bossesDefeated = Math.Max(0, player.bossesDefeated);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Could not load player difficulty progress: {ex.Message}");
+
+                _difficultyTier = 0;
+                _highestDifficultyTierReached = 0;
+                _bossesDefeated = 0;
+            }
         }
 
         private void Render()
         {
             SetStatus(string.Empty);
+
+            SetActive(victoryPanel, false);
+            SetActive(bossMapPanel, false);
+            SetActive(defeatPanel, false);
+
+            RefreshDifficultyText();
 
             var lastOutcome = _runSessionStore.GetLastOutcome();
 
@@ -88,15 +136,33 @@ namespace Game.Presentation.InGameMap.Controllers
                 RunSessionStore.OutcomeDefeat,
                 StringComparison.OrdinalIgnoreCase);
 
-            SetActive(victoryPanel, !isDefeat);
-            SetActive(defeatPanel, isDefeat);
-
             if (isDefeat)
             {
+                SetActive(defeatPanel, true);
                 RenderDefeat();
                 return;
             }
 
+            var isBossVictory = string.Equals(
+                lastOutcome,
+                RunSessionStore.OutcomeBossVictory,
+                StringComparison.OrdinalIgnoreCase);
+
+            if (isBossVictory)
+            {
+                SetActive(bossMapPanel, true);
+                SetStatus("Boss defeated. Saving run...");
+                _ = CompleteRunAndReturnHomeAsync(RunSessionStore.OutcomeBossVictory);
+                return;
+            }
+
+            if (_runSessionStore.IsNextFightBoss())
+            {
+                RenderBossChoice();
+                return;
+            }
+
+            SetActive(victoryPanel, true);
             RenderVictoryMap();
         }
 
@@ -121,12 +187,45 @@ namespace Game.Presentation.InGameMap.Controllers
             {
                 victorySummaryText.text =
                     "Battle Map\n\n" +
+                    $"World Tier: {_difficultyTier + 1}\n" +
+                    $"Highest Tier: {_highestDifficultyTierReached + 1}\n" +
+                    $"Bosses defeated: {_bossesDefeated}\n\n" +
                     $"Battles won this run: {battlesWon}\n" +
                     $"Route progress: {completedInCurrentRoute}/3\n" +
                     $"Gold collected: {totalGold}\n" +
                     $"XP collected: {totalExperience}\n\n" +
                     BuildVictoryInstructionText(isFreshRun, completedInCurrentRoute, canChooseHomeOrContinue);
             }
+        }
+
+        private void RenderBossChoice()
+        {
+            SetActive(victoryPanel, false);
+            SetActive(bossMapPanel, true);
+            SetActive(defeatPanel, false);
+
+            SetButtonVisible(bossFightButton, true);
+            SetButtonVisible(bossReturnHomeButton, true);
+
+            var totalGold = _runSessionStore.GetTotalGold();
+            var totalExperience = _runSessionStore.GetTotalExperience();
+            var battlesWon = _runSessionStore.GetBattlesWon();
+
+            if (bossSummaryText != null)
+            {
+                bossSummaryText.text =
+                    "Boss Battle\n\n" +
+                    $"World Tier: {_difficultyTier + 1}\n" +
+                    $"Highest Tier: {_highestDifficultyTierReached + 1}\n" +
+                    $"Bosses defeated: {_bossesDefeated}\n\n" +
+                    $"Battles won this run: {battlesWon}\n" +
+                    $"Gold collected: {totalGold}\n" +
+                    $"XP collected: {totalExperience}\n\n" +
+                    "You have cleared 9 battles.\n" +
+                    "Choose Return Home or Fight Boss.";
+            }
+
+            RefreshDifficultyText();
         }
 
         private void RenderDefeat()
@@ -139,6 +238,7 @@ namespace Game.Presentation.InGameMap.Controllers
             {
                 defeatSummaryText.text =
                     "Defeat\n\n" +
+                    $"World Tier: {_difficultyTier + 1}\n" +
                     $"Battles won this run: {battlesWon}\n" +
                     $"Gold to bank: {totalGold}\n" +
                     $"XP to bank: {totalExperience}\n\n" +
@@ -182,6 +282,12 @@ namespace Game.Presentation.InGameMap.Controllers
                 return;
             }
 
+            if (_runSessionStore.IsNextFightBoss())
+            {
+                SetStatus("The boss battle is available. Choose Return Home or Fight Boss.");
+                return;
+            }
+
             var battlesWon = _runSessionStore.GetBattlesWon();
             var completedInCurrentRoute = battlesWon % 3;
 
@@ -195,6 +301,7 @@ namespace Game.Presentation.InGameMap.Controllers
                 return;
             }
 
+            _runSessionStore.StartNormalFight();
             SceneManager.LoadScene(boardSceneName);
         }
 
@@ -202,6 +309,12 @@ namespace Game.Presentation.InGameMap.Controllers
         {
             if (_isBusy)
             {
+                return;
+            }
+
+            if (_runSessionStore.IsNextFightBoss())
+            {
+                SetStatus("The boss battle is available. Choose Return Home or Fight Boss.");
                 return;
             }
 
@@ -214,6 +327,24 @@ namespace Game.Presentation.InGameMap.Controllers
                 return;
             }
 
+            _runSessionStore.StartNormalFight();
+            SceneManager.LoadScene(boardSceneName);
+        }
+
+        private void OnBossFightClicked()
+        {
+            if (_isBusy)
+            {
+                return;
+            }
+
+            if (!_runSessionStore.IsNextFightBoss())
+            {
+                SetStatus("Boss battle unlocks after 9 battles.");
+                return;
+            }
+
+            _runSessionStore.StartBossFight();
             SceneManager.LoadScene(boardSceneName);
         }
 
@@ -273,9 +404,27 @@ namespace Game.Presentation.InGameMap.Controllers
             SetButtonInteractable(combat1Button, !isBusy);
             SetButtonInteractable(combat2Button, !isBusy);
             SetButtonInteractable(combat3Button, !isBusy);
+
             SetButtonInteractable(returnHomeButton, !isBusy);
             SetButtonInteractable(continueRouteButton, !isBusy);
+
+            SetButtonInteractable(bossFightButton, !isBusy);
+            SetButtonInteractable(bossReturnHomeButton, !isBusy);
+
             SetButtonInteractable(defeatReturnHomeButton, !isBusy);
+        }
+
+        private void RefreshDifficultyText()
+        {
+            if (difficultyText == null)
+            {
+                return;
+            }
+
+            difficultyText.text =
+                $"World Tier {_difficultyTier + 1}\n" +
+                $"Highest Tier {_highestDifficultyTierReached + 1}\n" +
+                $"Bosses defeated {_bossesDefeated}";
         }
 
         private static void RegisterButton(Button button, UnityEngine.Events.UnityAction action)

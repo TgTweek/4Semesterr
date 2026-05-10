@@ -14,5 +14,7 @@ namespace Game.Infrastructure.Api.Dtos.Combat
 
         public int goldReward;
         public int experienceReward;
+
+        public bool isBoss;
     }
 }

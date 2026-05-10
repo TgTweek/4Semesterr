@@ -19,5 +19,8 @@ namespace Game.Infrastructure.Api.Dtos.Player
         public int baseMaxHealth;
         public int baseMaxMana;
         public int movementTilesPerTurn;
+        public int difficultyTier;
+        public int highestDifficultyTierReached;
+        public int bossesDefeated;
     }
 }
