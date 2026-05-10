@@ -25,18 +25,22 @@ namespace Game.Application.Movement.UseCases
             var start = new CellPosition(command.StartX, command.StartY);
             var target = new CellPosition(command.TargetX, command.TargetY);
 
-            var path = _gridPathfinder.FindPath(start, target, _navigationGrid);
+            var path = _gridPathfinder.FindPath(
+                start,
+                target,
+                _navigationGrid,
+                command.BlockedCells);
 
             if (path.Count == 0)
             {
                 return FindPathResult.CreateFailure("No path found.");
             }
 
-            var points = path
+            var dtoPath = path
                 .Select(x => new PathPointDto(x.X, x.Y))
                 .ToList();
 
-            return FindPathResult.CreateSuccess(points);
+            return FindPathResult.CreateSuccess(dtoPath);
         }
     }
 }

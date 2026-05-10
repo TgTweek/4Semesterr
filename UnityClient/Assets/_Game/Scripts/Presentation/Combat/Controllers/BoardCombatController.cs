@@ -21,6 +21,8 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+using UnityEngine.EventSystems;
+
 namespace Game.Presentation.Combat.Controllers
 {
     public sealed class BoardCombatController : MonoBehaviour
@@ -87,7 +89,7 @@ namespace Game.Presentation.Combat.Controllers
         private PlayerCardInventoryItemDto _selectedDamageCard = null!;
         private bool _hasSelectedDamageCard;
         private bool _combatResolved;
-
+        private MonsterView _hoveredMonsterView = null!;
         public bool CanUseMovementInput()
         {
             return _combatState != null &&
@@ -95,7 +97,63 @@ namespace Game.Presentation.Combat.Controllers
                    _combatState.IsPlayerTurn &&
                    !_hasSelectedDamageCard;
         }
+        public IReadOnlyList<CellPosition> GetOccupiedMonsterCells()
+        {
+            var result = new List<CellPosition>();
 
+            if (grid == null)
+            {
+                return result;
+            }
+
+            foreach (var monsterView in _spawnedMonsterViews)
+            {
+                if (monsterView == null)
+                {
+                    continue;
+                }
+
+                var monsterState = monsterView.RuntimeState;
+                if (monsterState == null || monsterState.IsDead)
+                {
+                    continue;
+                }
+
+                var monsterCell = grid.WorldToCell(monsterView.transform.position);
+                result.Add(ToCellPosition(monsterCell));
+            }
+
+            return result;
+        }
+        public bool IsMonsterOccupyingCell(Vector3Int cell)
+        {
+            if (grid == null)
+            {
+                return false;
+            }
+
+            foreach (var monsterView in _spawnedMonsterViews)
+            {
+                if (monsterView == null)
+                {
+                    continue;
+                }
+
+                var monsterState = monsterView.RuntimeState;
+                if (monsterState == null || monsterState.IsDead)
+                {
+                    continue;
+                }
+
+                var monsterCell = grid.WorldToCell(monsterView.transform.position);
+                if (monsterCell == cell)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
         private void Awake()
         {
             _authTokenStore = new AuthTokenStore();
@@ -564,6 +622,8 @@ namespace Game.Presentation.Combat.Controllers
 
         private void Update()
         {
+            UpdateHoveredMonster();
+
             if (_combatState == null) return;
             if (_combatState.IsFinished) return;
             if (!_combatState.IsPlayerTurn) return;
@@ -589,27 +649,12 @@ namespace Game.Presentation.Combat.Controllers
                 return;
             }
 
-            var screenPosition = Mouse.current.position.ReadValue();
-            var worldPoint = worldCamera.ScreenToWorldPoint(
-                new Vector3(
-                    screenPosition.x,
-                    screenPosition.y,
-                    Mathf.Abs(worldCamera.transform.position.z)));
-
-            var hit = Physics2D.Raycast(worldPoint, Vector2.zero);
-
-            if (!hit.collider)
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 return;
             }
 
-            var monsterView = hit.collider.GetComponent<MonsterView>();
-            if (monsterView == null)
-            {
-                monsterView = hit.collider.GetComponentInParent<MonsterView>();
-            }
-
-            if (monsterView == null)
+            if (!TryGetMonsterViewUnderMouse(out var monsterView))
             {
                 return;
             }
@@ -631,10 +676,7 @@ namespace Game.Presentation.Combat.Controllers
                 monsterCell,
                 command);
 
-            if (monsterView != null)
-            {
-                monsterView.Refresh();
-            }
+            monsterView.Refresh();
 
             if (success)
             {
@@ -654,6 +696,98 @@ namespace Game.Presentation.Combat.Controllers
                 EffectValue = card.effectValue,
                 Range = GetDamageRange(card)
             };
+        }
+        private void UpdateHoveredMonster()
+        {
+            if (_combatState == null || _combatState.IsFinished)
+            {
+                SetHoveredMonster(null);
+                return;
+            }
+
+            if (worldCamera == null || Mouse.current == null)
+            {
+                SetHoveredMonster(null);
+                return;
+            }
+
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                SetHoveredMonster(null);
+                return;
+            }
+
+            if (!TryGetMonsterViewUnderMouse(out var monsterView))
+            {
+                SetHoveredMonster(null);
+                return;
+            }
+
+            SetHoveredMonster(monsterView);
+        }
+
+        private bool TryGetMonsterViewUnderMouse(out MonsterView monsterView)
+        {
+            monsterView = null!;
+
+            if (worldCamera == null || Mouse.current == null)
+            {
+                return false;
+            }
+
+            var screenPosition = Mouse.current.position.ReadValue();
+            var worldPoint = worldCamera.ScreenToWorldPoint(
+                new Vector3(
+                    screenPosition.x,
+                    screenPosition.y,
+                    Mathf.Abs(worldCamera.transform.position.z)));
+
+            var hit = Physics2D.Raycast(worldPoint, Vector2.zero);
+
+            if (!hit.collider)
+            {
+                return false;
+            }
+
+            monsterView = hit.collider.GetComponent<MonsterView>();
+            if (monsterView == null)
+            {
+                monsterView = hit.collider.GetComponentInParent<MonsterView>();
+            }
+
+            if (monsterView == null)
+            {
+                return false;
+            }
+
+            var monsterState = monsterView.RuntimeState;
+            if (monsterState == null || monsterState.IsDead)
+            {
+                monsterView = null!;
+                return false;
+            }
+
+            return true;
+        }
+
+        private void SetHoveredMonster(MonsterView monsterView)
+        {
+            if (_hoveredMonsterView == monsterView)
+            {
+                return;
+            }
+
+            if (_hoveredMonsterView != null)
+            {
+                _hoveredMonsterView.SetHovered(false);
+            }
+
+            _hoveredMonsterView = monsterView;
+
+            if (_hoveredMonsterView != null)
+            {
+                _hoveredMonsterView.SetHovered(true);
+            }
         }
 
         private int GetDamageRange(PlayerCardInventoryItemDto card)
@@ -695,6 +829,7 @@ namespace Game.Presentation.Combat.Controllers
 
             _combatResolved = true;
             CancelSelectedSpellSilently();
+            SetHoveredMonster(null);
 
             var goldEarned = Math.Max(0, _combatState.PendingRunGold);
             var experienceEarned = Math.Max(0, _combatState.PendingRunExperience);
@@ -760,6 +895,8 @@ namespace Game.Presentation.Combat.Controllers
 
         private void ClearSpawnedMonsters()
         {
+            SetHoveredMonster(null);
+
             for (var i = _spawnedMonsterViews.Count - 1; i >= 0; i--)
             {
                 var monsterView = _spawnedMonsterViews[i];
@@ -778,6 +915,13 @@ namespace Game.Presentation.Combat.Controllers
             if (_combatState == null)
             {
                 return;
+            }
+
+            if (_hoveredMonsterView == null ||
+                _hoveredMonsterView.RuntimeState == null ||
+                _hoveredMonsterView.RuntimeState.IsDead)
+            {
+                SetHoveredMonster(null);
             }
 
             for (var i = _spawnedMonsterViews.Count - 1; i >= 0; i--)
