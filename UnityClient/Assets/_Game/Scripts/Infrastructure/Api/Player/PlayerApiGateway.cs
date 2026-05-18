@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading.Tasks;
 using Game.Infrastructure.Api.Dtos.Player;
 using Game.Infrastructure.Auth;
@@ -30,13 +31,7 @@ namespace Game.Infrastructure.Api.Player
             var url = $"{_baseUrl}/api/player/{playerId}";
 
             using var request = UnityWebRequest.Get(url);
-            request.SetRequestHeader("Accept", "application/json");
-
-            var token = _authTokenStore.GetAccessToken();
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                request.SetRequestHeader("Authorization", $"Bearer {token}");
-            }
+            ApplyHeaders(request);
 
             var operation = request.SendWebRequest();
 
@@ -51,6 +46,58 @@ namespace Game.Infrastructure.Api.Player
             }
 
             return ParseResponse<PlayerDto>(request.downloadHandler.text);
+        }
+
+        public async Task<PlayerDto> SetDifficultyTierAsync(int difficultyTier)
+        {
+            var url = $"{_baseUrl}/api/player/difficulty-tier";
+
+            var requestDto = new SetDifficultyTierRequestDto
+            {
+                difficultyTier = Math.Max(0, difficultyTier)
+            };
+
+            return await PostJsonAsync<PlayerDto, SetDifficultyTierRequestDto>(url, requestDto);
+        }
+
+        private async Task<TResponse> PostJsonAsync<TResponse, TRequest>(string url, TRequest requestDto)
+        {
+            var json = JsonUtility.ToJson(requestDto);
+            var bodyRaw = Encoding.UTF8.GetBytes(json);
+
+            using var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST);
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+
+            ApplyHeaders(request);
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            var operation = request.SendWebRequest();
+
+            while (!operation.isDone)
+            {
+                await Task.Yield();
+            }
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                throw new InvalidOperationException(BuildErrorMessage(request));
+            }
+
+            return ParseResponse<TResponse>(request.downloadHandler.text);
+        }
+
+        private void ApplyHeaders(UnityWebRequest request)
+        {
+            request.SetRequestHeader("Accept", "application/json");
+
+            var token = _authTokenStore.GetAccessToken();
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                throw new InvalidOperationException("No access token found. Login first.");
+            }
+
+            request.SetRequestHeader("Authorization", $"Bearer {token}");
         }
 
         private static TResponse ParseResponse<TResponse>(string json)

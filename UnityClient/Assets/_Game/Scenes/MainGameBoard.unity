@@ -2237,7 +2237,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 250}
+  m_AnchoredPosition: {x: 0, y: 350}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &700912709
@@ -3185,7 +3185,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 50}
+  m_AnchoredPosition: {x: 0, y: 10}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1186410375
@@ -3528,6 +3528,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Presentation::Game.Presentation.Combat.Controllers.BoardCombatController
   baseUrl: https://localhost:7038
+  inGameMapSceneName: InGameMap
+  combatResultDelaySeconds: 0.8
   worldCamera: {fileID: 577647760}
   grid: {fileID: 1968285431}
   playerTransform: {fileID: 1216780919}
@@ -3562,6 +3564,12 @@ MonoBehaviour:
     sprite: {fileID: -3713632841749855676, guid: ead86f606d63ea840b7ce6c2d41eaa90, type: 3}
   - monsterKey: venom_spider
     sprite: {fileID: 7072956174949963807, guid: ead86f606d63ea840b7ce6c2d41eaa90, type: 3}
+  - monsterKey: plague_witch
+    sprite: {fileID: -9131729600373848177, guid: 3005f7a26e7964241ad415cc8e645d81, type: 3}
+  - monsterKey: iron_golem
+    sprite: {fileID: 579345605572779739, guid: 3005f7a26e7964241ad415cc8e645d81, type: 3}
+  - monsterKey: flame_hound
+    sprite: {fileID: 984474798979963003, guid: 3005f7a26e7964241ad415cc8e645d81, type: 3}
   spellSlotsRoot: {fileID: 208101342}
   spellSlotPrefab: {fileID: 567611081656907824, guid: c519261d60b4f5a4aa17f11ea8f1cba4, type: 3}
   cancelSelectedSpellButton: {fileID: 835111026}
@@ -4012,8 +4020,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 400}
-  m_SizeDelta: {x: 200, y: 0}
+  m_AnchoredPosition: {x: 0, y: 450}
+  m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2083721575
 MonoBehaviour:

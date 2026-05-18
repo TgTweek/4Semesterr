@@ -8,11 +8,13 @@ namespace Game.Infrastructure.Run
         public const string OutcomeVictory = "Victory";
         public const string OutcomeDefeat = "Defeat";
         public const string OutcomeReturnedHome = "ReturnedHome";
+        public const string OutcomeBossVictory = "BossVictory";
 
         private const string TotalGoldKey = "run.total_gold";
         private const string TotalExperienceKey = "run.total_experience";
         private const string BattlesWonKey = "run.battles_won";
         private const string LastOutcomeKey = "run.last_outcome";
+        private const string CurrentFightIsBossKey = "run.current_fight_is_boss";
 
         public void StartNewRun()
         {
@@ -20,7 +22,31 @@ namespace Game.Infrastructure.Run
             PlayerPrefs.SetInt(TotalExperienceKey, 0);
             PlayerPrefs.SetInt(BattlesWonKey, 0);
             PlayerPrefs.SetString(LastOutcomeKey, string.Empty);
+            PlayerPrefs.SetInt(CurrentFightIsBossKey, 0);
             PlayerPrefs.Save();
+        }
+
+        public void StartNormalFight()
+        {
+            PlayerPrefs.SetInt(CurrentFightIsBossKey, 0);
+            PlayerPrefs.Save();
+        }
+
+        public void StartBossFight()
+        {
+            PlayerPrefs.SetInt(CurrentFightIsBossKey, 1);
+            PlayerPrefs.Save();
+        }
+
+        public bool IsCurrentFightBoss()
+        {
+            return PlayerPrefs.GetInt(CurrentFightIsBossKey, 0) == 1;
+        }
+
+        public bool IsNextFightBoss()
+        {
+            var battlesWon = GetBattlesWon();
+            return battlesWon > 0 && battlesWon % 9 == 0;
         }
 
         public void RegisterVictory(int goldEarned, int experienceEarned)
@@ -29,7 +55,13 @@ namespace Game.Infrastructure.Run
 
             var battlesWon = GetBattlesWon();
             PlayerPrefs.SetInt(BattlesWonKey, battlesWon + 1);
-            PlayerPrefs.SetString(LastOutcomeKey, OutcomeVictory);
+
+            var outcome = IsCurrentFightBoss()
+                ? OutcomeBossVictory
+                : OutcomeVictory;
+
+            PlayerPrefs.SetString(LastOutcomeKey, outcome);
+            PlayerPrefs.SetInt(CurrentFightIsBossKey, 0);
 
             PlayerPrefs.Save();
         }
@@ -39,6 +71,7 @@ namespace Game.Infrastructure.Run
             AddRewards(goldEarned, experienceEarned);
 
             PlayerPrefs.SetString(LastOutcomeKey, OutcomeDefeat);
+            PlayerPrefs.SetInt(CurrentFightIsBossKey, 0);
             PlayerPrefs.Save();
         }
 
@@ -74,6 +107,7 @@ namespace Game.Infrastructure.Run
             PlayerPrefs.DeleteKey(TotalExperienceKey);
             PlayerPrefs.DeleteKey(BattlesWonKey);
             PlayerPrefs.DeleteKey(LastOutcomeKey);
+            PlayerPrefs.DeleteKey(CurrentFightIsBossKey);
             PlayerPrefs.Save();
         }
 

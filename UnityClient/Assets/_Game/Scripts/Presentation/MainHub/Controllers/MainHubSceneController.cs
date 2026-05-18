@@ -10,6 +10,8 @@ using Game.Infrastructure.Api.Dtos.Player;
 using Game.Presentation.Inventory.Controllers;
 using Game.Presentation.Merchant.Controllers;
 using Game.Infrastructure.Run;
+using Game.Infrastructure.Combat;
+using Game.Presentation.MainHub.Views;
 
 namespace Game.Presentation.MainHub.Controllers
 {
@@ -59,9 +61,17 @@ namespace Game.Presentation.MainHub.Controllers
         [SerializeField] private TMP_Text xpText = null!;
         [SerializeField] private Image xpFillImage = null!;
 
+        [Header("World Map Tier UI")]
+        [SerializeField] private TMP_Text worldTierSummaryText = null!;
+        [SerializeField] private Transform worldTierRowsParent = null!;
+        [SerializeField] private WorldTierRowView worldTierRowPrefab = null!;
+        [SerializeField] private int futureTiersToPreview = 5;
+
         private AuthTokenStore _authTokenStore = null!;
         private RunSessionStore _runSessionStore = null!;
         private PlayerApiGateway _playerApiGateway = null!;
+        private MonsterRuntimeFactory _monsterRuntimeFactory = null!;
+
         private bool _isBusy;
 
         private void Awake()
@@ -70,29 +80,19 @@ namespace Game.Presentation.MainHub.Controllers
             _runSessionStore = new RunSessionStore();
 
             _playerApiGateway = new PlayerApiGateway(apiBaseUrl, _authTokenStore);
-            merchantHotspotButton.onClick.RemoveAllListeners();
-            houseHotspotButton.onClick.RemoveAllListeners();
-            chestHotspotButton.onClick.RemoveAllListeners();
-            worldMapHotspotButton.onClick.RemoveAllListeners();
+            _monsterRuntimeFactory = new MonsterRuntimeFactory();
 
-            merchantCloseButton.onClick.RemoveAllListeners();
-            houseCloseButton.onClick.RemoveAllListeners();
-            chestCloseButton.onClick.RemoveAllListeners();
-            worldMapCloseButton.onClick.RemoveAllListeners();
+            RegisterButton(merchantHotspotButton, OpenMerchantPanel);
+            RegisterButton(houseHotspotButton, OpenHousePanel);
+            RegisterButton(chestHotspotButton, OpenChestPanel);
+            RegisterButton(worldMapHotspotButton, OpenWorldMapPanel);
 
-            startRunButton.onClick.RemoveAllListeners();
+            RegisterButton(merchantCloseButton, CloseAllPanels);
+            RegisterButton(houseCloseButton, CloseAllPanels);
+            RegisterButton(chestCloseButton, CloseAllPanels);
+            RegisterButton(worldMapCloseButton, CloseAllPanels);
 
-            merchantHotspotButton.onClick.AddListener(OpenMerchantPanel);
-            houseHotspotButton.onClick.AddListener(OpenHousePanel);
-            chestHotspotButton.onClick.AddListener(OpenChestPanel);
-            worldMapHotspotButton.onClick.AddListener(OpenWorldMapPanel);
-
-            merchantCloseButton.onClick.AddListener(CloseAllPanels);
-            houseCloseButton.onClick.AddListener(CloseAllPanels);
-            chestCloseButton.onClick.AddListener(CloseAllPanels);
-            worldMapCloseButton.onClick.AddListener(CloseAllPanels);
-
-            startRunButton.onClick.AddListener(OnStartRunClicked);
+            RegisterButton(startRunButton, OnStartRunClicked);
 
             if (merchantPanelScript != null)
             {
@@ -118,55 +118,80 @@ namespace Game.Presentation.MainHub.Controllers
 
         private async void OpenMerchantPanel()
         {
-            if (_isBusy) return;
+            if (_isBusy)
+            {
+                return;
+            }
 
             ShowOnlyPanel(merchantPanel);
-            await merchantPanelScript.LoadInventoryAsync();
+
+            if (merchantPanelScript != null)
+            {
+                await merchantPanelScript.LoadInventoryAsync();
+            }
         }
 
         private async void OpenHousePanel()
         {
-            if (_isBusy) return;
+            if (_isBusy)
+            {
+                return;
+            }
 
             ShowOnlyPanel(housePanel);
-            await houseInventoryPanelScript.LoadInventoryAsync();
+
+            if (houseInventoryPanelScript != null)
+            {
+                await houseInventoryPanelScript.LoadInventoryAsync();
+            }
         }
 
         private async void OpenChestPanel()
         {
-            if (_isBusy) return;
+            if (_isBusy)
+            {
+                return;
+            }
 
             ShowOnlyPanel(chestPanel);
-            await chestInventoryPanelScript.LoadInventoryAsync();
+
+            if (chestInventoryPanelScript != null)
+            {
+                await chestInventoryPanelScript.LoadInventoryAsync();
+            }
         }
 
-        private void OpenWorldMapPanel()
+        private async void OpenWorldMapPanel()
         {
-            if (_isBusy) return;
+            if (_isBusy)
+            {
+                return;
+            }
 
             ShowOnlyPanel(worldMapPanel);
+            await RenderWorldMapPanelAsync();
         }
 
         private void ShowOnlyPanel(GameObject panelToShow)
         {
-            dimOverlay.SetActive(true);
+            SetActive(dimOverlay, true);
 
-            merchantPanel.SetActive(false);
-            housePanel.SetActive(false);
-            chestPanel.SetActive(false);
-            worldMapPanel.SetActive(false);
+            SetActive(merchantPanel, false);
+            SetActive(housePanel, false);
+            SetActive(chestPanel, false);
+            SetActive(worldMapPanel, false);
 
-            panelToShow.SetActive(true);
+            SetActive(panelToShow, true);
         }
 
         private void CloseAllPanels()
         {
-            dimOverlay.SetActive(false);
+            SetActive(dimOverlay, false);
 
-            merchantPanel.SetActive(false);
-            housePanel.SetActive(false);
-            chestPanel.SetActive(false);
-            worldMapPanel.SetActive(false);
+            SetActive(merchantPanel, false);
+            SetActive(housePanel, false);
+            SetActive(chestPanel, false);
+            SetActive(worldMapPanel, false);
         }
 
         private void OnStartRunClicked()
@@ -217,9 +242,20 @@ namespace Game.Presentation.MainHub.Controllers
 
         private void SetDefaultPlayerHud()
         {
-            goldText.text = "Gold: --";
-            levelText.text = "Level: --";
-            xpText.text = "XP: -- / --";
+            if (goldText != null)
+            {
+                goldText.text = "Gold: --";
+            }
+
+            if (levelText != null)
+            {
+                levelText.text = "Level: --";
+            }
+
+            if (xpText != null)
+            {
+                xpText.text = "XP: -- / --";
+            }
 
             if (xpFillImage != null)
             {
@@ -229,13 +265,30 @@ namespace Game.Presentation.MainHub.Controllers
 
         private void ApplyPlayerHud(PlayerDto player)
         {
-            goldText.text = $"Gold: {player.daluMoney}";
-            levelText.text = $"Level: {player.level}";
+            if (goldText != null)
+            {
+                goldText.text = $"Gold: {player.daluMoney}";
+            }
+
+            if (levelText != null)
+            {
+                levelText.text = $"Level: {player.level}";
+            }
+
+            if (xpText == null)
+            {
+                return;
+            }
 
             if (player.maxLevel > 0 && player.level >= player.maxLevel)
             {
                 xpText.text = "XP: MAX";
-                xpFillImage.fillAmount = 1f;
+
+                if (xpFillImage != null)
+                {
+                    xpFillImage.fillAmount = 1f;
+                }
+
                 return;
             }
 
@@ -243,7 +296,203 @@ namespace Game.Presentation.MainHub.Controllers
             var current = Mathf.Clamp(player.experience, 0, required);
 
             xpText.text = $"XP: {current} / {required}";
-            xpFillImage.fillAmount = Mathf.Clamp01((float)current / required);
+
+            if (xpFillImage != null)
+            {
+                xpFillImage.fillAmount = Mathf.Clamp01((float)current / required);
+            }
+        }
+
+        private async Task RenderWorldMapPanelAsync()
+        {
+            if (!_authTokenStore.HasAccessToken())
+            {
+                SceneManager.LoadScene(loginSceneName);
+                return;
+            }
+
+            try
+            {
+                var player = await _playerApiGateway.GetCurrentPlayerAsync();
+
+                RenderWorldTierSummary(
+                    player.difficultyTier,
+                    player.highestDifficultyTierReached,
+                    player.bossesDefeated);
+
+                RenderWorldTierRows(
+                    player.difficultyTier,
+                    player.highestDifficultyTierReached);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to render world map tier UI: {ex.Message}");
+
+                if (worldTierSummaryText != null)
+                {
+                    worldTierSummaryText.text = "Could not load world tier data.";
+                }
+
+                ClearWorldTierRows();
+            }
+        }
+
+        private void RenderWorldTierSummary(
+            int difficultyTier,
+            int highestDifficultyTierReached,
+            int bossesDefeated)
+        {
+            if (worldTierSummaryText == null)
+            {
+                return;
+            }
+
+            var safeCurrentTier = Math.Max(0, difficultyTier);
+            var safeHighestTier = Math.Max(0, highestDifficultyTierReached);
+            var safeBossesDefeated = Math.Max(0, bossesDefeated);
+
+            worldTierSummaryText.text =
+                $"Current World Tier: {safeCurrentTier + 1}\n" +
+                $"Highest Tier Reached: {safeHighestTier + 1}\n" +
+                $"Bosses Defeated: {safeBossesDefeated}";
+        }
+
+        private void RenderWorldTierRows(
+            int difficultyTier,
+            int highestDifficultyTierReached)
+        {
+            ClearWorldTierRows();
+
+            if (worldTierRowsParent == null || worldTierRowPrefab == null)
+            {
+                Debug.LogWarning("World tier rows parent or row prefab is not assigned.");
+                return;
+            }
+
+            var safeCurrentTier = Math.Max(0, difficultyTier);
+            var safeHighestTier = Math.Max(0, highestDifficultyTierReached);
+
+            var maxTierToShow = Math.Max(
+                safeHighestTier + futureTiersToPreview,
+                safeCurrentTier + futureTiersToPreview);
+
+            for (var tier = maxTierToShow; tier >= 0; tier--)
+            {
+                var tierToBind = tier;
+
+                var isUnlocked = tierToBind <= safeHighestTier;
+                var isCurrent = tierToBind == safeCurrentTier;
+                var canSelect = isUnlocked && !isCurrent && !_isBusy;
+
+                var row = Instantiate(worldTierRowPrefab, worldTierRowsParent);
+                row.gameObject.SetActive(true);
+
+                var rowText = _monsterRuntimeFactory.BuildDifficultyRow(
+                    tierToBind,
+                    safeCurrentTier,
+                    safeHighestTier);
+
+               
+
+                row.Bind(
+                    rowText,
+                    canSelect,
+                    () => OnWorldTierClicked(tierToBind));
+            }
+        }
+
+        private async void OnWorldTierClicked(int difficultyTier)
+        {
+            if (_isBusy)
+            {
+                return;
+            }
+
+            try
+            {
+                SetBusy(true);
+
+                var player = await _playerApiGateway.SetDifficultyTierAsync(difficultyTier);
+
+                ApplyPlayerHud(player);
+
+                SetBusy(false);
+
+                RenderWorldTierSummary(
+                    player.difficultyTier,
+                    player.highestDifficultyTierReached,
+                    player.bossesDefeated);
+
+                RenderWorldTierRows(
+                    player.difficultyTier,
+                    player.highestDifficultyTierReached);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to change world tier: {ex.Message}");
+                SetBusy(false);
+            }
+        }
+
+        private void ClearWorldTierRows()
+        {
+            if (worldTierRowsParent == null)
+            {
+                return;
+            }
+
+            for (var i = worldTierRowsParent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(worldTierRowsParent.GetChild(i).gameObject);
+            }
+        }
+
+        private void SetBusy(bool isBusy)
+        {
+            _isBusy = isBusy;
+
+            SetButtonInteractable(merchantHotspotButton, !isBusy);
+            SetButtonInteractable(houseHotspotButton, !isBusy);
+            SetButtonInteractable(chestHotspotButton, !isBusy);
+            SetButtonInteractable(worldMapHotspotButton, !isBusy);
+
+            SetButtonInteractable(merchantCloseButton, !isBusy);
+            SetButtonInteractable(houseCloseButton, !isBusy);
+            SetButtonInteractable(chestCloseButton, !isBusy);
+            SetButtonInteractable(worldMapCloseButton, !isBusy);
+
+            SetButtonInteractable(startRunButton, !isBusy);
+        }
+
+        private static void RegisterButton(Button button, UnityEngine.Events.UnityAction action)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(action);
+        }
+
+        private static void SetButtonInteractable(Button button, bool isInteractable)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.interactable = isInteractable;
+        }
+
+        private static void SetActive(GameObject target, bool isActive)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            target.SetActive(isActive);
         }
     }
 }
